@@ -156,8 +156,9 @@ final class JetKVMDriver: KVMDriver {
 
         let recvOnly = RTCRtpTransceiverInit()
         recvOnly.direction = .recvOnly
+        // Video only: an audio m-line makes WebRTC start its full audio device module, which opens
+        // the microphone (TCC crash without a usage string). The device sends audio only if offered.
         let video = peer.addTransceiver(of: .video, init: recvOnly)
-        peer.addTransceiver(of: .audio, init: recvOnly)
         // Recent JetKVM firmware switches to H.265 when the offer allows it; H.264 decodes everywhere.
         let codecs = WebRTCFactory.shared.rtpReceiverCapabilities(forKind: kRTCMediaStreamTrackKindVideo).codecs
             .filter { !["H265", "HEVC"].contains($0.name.uppercased()) }

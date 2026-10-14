@@ -185,7 +185,9 @@ final class JanusStream {
         do {
             try await peer.setRemoteDescription(RTCSessionDescription(type: .offer, sdp: offerSDP))
             for transceiver in peer.transceivers {
-                transceiver.setDirection(.recvOnly, error: nil)
+                // Refuse any audio the server offers anyway: receiving audio would start WebRTC's
+                // audio device module and with it the microphone.
+                transceiver.setDirection(transceiver.mediaType == .audio ? .inactive : .recvOnly, error: nil)
                 if let track = transceiver.receiver.track as? RTCVideoTrack { onTrack?(track) }
             }
             let answer = try await peer.answer(for: RTCMediaConstraints(

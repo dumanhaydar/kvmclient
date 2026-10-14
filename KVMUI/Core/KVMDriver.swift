@@ -119,6 +119,13 @@ extension KVMDriver {
 enum WebRTCFactory {
     static let shared: RTCPeerConnectionFactory = {
         RTCInitializeSSL()
+        #if os(iOS)
+        // No audio is used: keep WebRTC from configuring and activating AVAudioSession
+        // (play-and-record would ask for the microphone).
+        let audioSession = RTCAudioSession.sharedInstance()
+        audioSession.useManualAudio = true
+        audioSession.isAudioEnabled = false
+        #endif
         return RTCPeerConnectionFactory(encoderFactory: RTCDefaultVideoEncoderFactory(),
                                         decoderFactory: RTCDefaultVideoDecoderFactory())
     }()
