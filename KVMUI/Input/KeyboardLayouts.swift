@@ -1,7 +1,8 @@
 import Foundation
 
-/// Character → keystroke tables for the remote machine's keyboard layout, extracted from the
-/// PicoKVM web UI. Used to type text (virtual keyboard, paste) as the remote OS expects it.
+/// Character → keystroke tables for the remote machine's keyboard layout, generated from
+/// xkeyboard-config's PC layouts by Tools/generate-keyboard-layouts.py. Used to type text
+/// (virtual keyboard, paste) so the remote OS produces exactly the intended characters.
 struct KeyboardLayout: Decodable {
     struct Stroke: Decodable {
         let k: UInt8
@@ -28,6 +29,8 @@ struct KeyboardLayout: Decodable {
 
     let name: String
     let chars: [String: Stroke]
+    /// Set on duplicate entries kept for device codes (e.g. "nl-BE" → "fr-BE").
+    let alias: String?
 
     /// The key presses (usage + modifier byte) needed to type `character`, or nil if unsupported.
     func strokes(for character: Character) -> [(usage: UInt8, modifier: UInt8)]? {
@@ -49,7 +52,7 @@ struct KeyboardLayout: Decodable {
 
     /// Sorted (code, name) pairs for pickers.
     static var choices: [(code: String, name: String)] {
-        all.map { ($0.key, $0.value.name) }.sorted { $0.name < $1.name }
+        all.filter { $0.value.alias == nil }.map { ($0.key, $0.value.name) }.sorted { $0.name < $1.name }
     }
 
     /// Accepts the device's codes ("en_US", "fr-BE") and falls back to US English.

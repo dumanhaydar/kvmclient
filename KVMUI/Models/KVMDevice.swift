@@ -4,7 +4,7 @@ import Foundation
 struct KVMDevice: Identifiable, Codable, Hashable {
     var id = UUID()
     var name: String
-    /// Local network host or host:port, e.g. "10.1.0.16" or "picokvm.local".
+    /// Local network host or host:port, e.g. "192.168.1.50" or "kvm.local".
     var host: String
     var useHTTPS = false
     /// nil until detected on first connection (or chosen by hand).

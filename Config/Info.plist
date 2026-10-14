@@ -10,6 +10,6 @@
 		<true/>
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>KVMUI se connecte à votre PicoKVM sur le réseau local.</string>
+	<string>KVM Client se connecte à vos KVM sur le réseau local.</string>
 </dict>
 </plist>
