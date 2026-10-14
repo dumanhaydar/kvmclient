@@ -3,6 +3,7 @@ import SwiftUI
 struct SessionView: View {
     @Environment(DeviceStore.self) private var store
     @State private var session: KVMSession
+    @State private var username = ""
     @State private var password = ""
     @State private var rememberPassword = true
     @State private var capturesShortcuts = true
@@ -56,8 +57,8 @@ struct SessionView: View {
                         Text(step).foregroundStyle(.secondary)
                     }
                 }
-            case .needsPassword(let error):
-                passwordPrompt(error: error)
+            case .needsCredentials(let error):
+                credentialsPrompt(error: error)
             case .failed(let message):
                 VStack(spacing: 16) {
                     statusCard(icon: "exclamationmark.triangle", title: "Connexion impossible", message: message)
@@ -75,10 +76,8 @@ struct SessionView: View {
         #endif
         .toolbar { toolbar }
         .task {
-            let id = session.device.id
-            session.onOverlayAddresses = { [store] tailscale, zeroTier in
-                store.updateOverlayAddresses(for: id, tailscale: tailscale, zeroTier: zeroTier)
-            }
+            session.onDeviceUpdate = { [store] device in store.update(device) }
+            username = session.device.username ?? session.kind?.defaultUsername ?? ""
             connect()
         }
         .onDisappear { session.disconnect() }
@@ -145,7 +144,7 @@ struct SessionView: View {
                 Button("Autoriser ⌘Tab", systemImage: "lock.shield") {
                     SystemKeyInterceptor.requestTrust()
                 }
-                .help("macOS doit autoriser KVMUI dans Réglages › Confidentialité et sécurité › Accessibilité")
+                .help("macOS doit autoriser l'app dans Réglages › Confidentialité et sécurité › Accessibilité")
             }
             #endif
 
@@ -177,15 +176,24 @@ struct SessionView: View {
     }
 
     private func connect(with password: String? = nil) {
-        Task {
-            await session.connect(password: password ?? Keychain.password(for: session.device.id))
-        }
+        let credentials = Credentials(username: username.isEmpty ? nil : username,
+                                      password: password ?? Keychain.password(for: session.device.id))
+        Task { await session.connect(credentials: credentials) }
     }
 
-    private func passwordPrompt(error: String?) -> some View {
+    private func credentialsPrompt(error: String?) -> some View {
         VStack(spacing: 14) {
             Image(systemName: "lock").font(.largeTitle)
-            Text("Mot de passe du KVM").font(.headline)
+            Text(session.kind.map { "Connexion à \($0.shortTitle)" } ?? "Connexion au KVM").font(.headline)
+            if session.kind?.usesUsername == true {
+                TextField("Utilisateur", text: $username)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: 280)
+                    .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    #endif
+            }
             SecureField("Mot de passe", text: $password)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 280)

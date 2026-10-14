@@ -9,20 +9,35 @@ struct DeviceEditorView: View {
     @State private var host = ""
     @State private var useHTTPS = false
     @State private var password = ""
+    @State private var kind: DeviceKind?
+    @State private var username = ""
     @State private var tailscaleHost = ""
     @State private var zeroTierHost = ""
 
     var body: some View {
         NavigationStack {
             Form {
-                TextField("Nom", text: $name, prompt: Text("PicoKVM"))
-                TextField("Adresse", text: $host, prompt: Text("10.1.0.16"))
+                TextField("Nom", text: $name, prompt: Text("Mon KVM"))
+                TextField("Adresse", text: $host, prompt: Text("192.168.1.50 ou kvm.local"))
                     .autocorrectionDisabled()
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
                     #endif
                 Toggle("HTTPS (certificat auto-signé)", isOn: $useHTTPS)
+                Picker("Type", selection: $kind) {
+                    Text("Détection automatique").tag(DeviceKind?.none)
+                    ForEach(DeviceKind.allCases) { kind in
+                        Text(kind.title).tag(DeviceKind?.some(kind))
+                    }
+                }
+                if kind?.usesUsername ?? true, kind != .jetKVM {
+                    TextField("Utilisateur", text: $username, prompt: Text(kind?.defaultUsername ?? "admin"))
+                        .autocorrectionDisabled()
+                        #if os(iOS)
+                        .textInputAutocapitalization(.never)
+                        #endif
+                }
                 SecureField("Mot de passe", text: $password,
                             prompt: Text(device == nil ? "Optionnel" : "Inchangé si vide"))
 
@@ -54,7 +69,9 @@ struct DeviceEditorView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Enregistrer") {
                         var saved = device ?? KVMDevice(name: "", host: "")
-                        saved.name = name.isEmpty ? "PicoKVM" : name
+                        saved.name = name.isEmpty ? (kind?.shortTitle ?? "KVM") : name
+                        saved.kind = kind
+                        saved.username = Self.optional(username)
                         saved.host = host.trimmingCharacters(in: .whitespaces)
                         saved.useHTTPS = useHTTPS
                         saved.tailscaleHost = Self.optional(tailscaleHost)
@@ -67,12 +84,14 @@ struct DeviceEditorView: View {
             }
         }
         #if os(macOS)
-        .frame(minWidth: 420, minHeight: 380)
+        .frame(minWidth: 440, minHeight: 460)
         #endif
         .onAppear {
             name = device?.name ?? ""
             host = device?.host ?? ""
             useHTTPS = device?.useHTTPS ?? false
+            kind = device?.kind
+            username = device?.username ?? ""
             tailscaleHost = device?.tailscaleHost ?? ""
             zeroTierHost = device?.zeroTierHost ?? ""
         }

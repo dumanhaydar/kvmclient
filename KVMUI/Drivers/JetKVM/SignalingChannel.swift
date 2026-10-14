@@ -10,8 +10,8 @@ final class SignalingChannel {
     private var heartbeat: Task<Void, Never>?
     private var closed = false
 
-    init(url: URL, session: URLSession) {
-        task = session.webSocketTask(with: url)
+    init(task: URLSessionWebSocketTask) {
+        self.task = task
     }
 
     func open() {

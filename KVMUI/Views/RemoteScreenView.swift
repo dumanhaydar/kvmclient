@@ -54,19 +54,20 @@ extension RemoteScreenView: NSViewRepresentable {
 
     func updateNSView(_ view: MacScreenView, context: Context) {
         view.capturesSystemShortcuts = capturesSystemShortcuts
-        view.attach(track: session.videoTrack)
+        view.attach(feed: session.video)
         view.sourceSize = session.sourceSize
     }
 
     static func dismantleNSView(_ view: MacScreenView, coordinator: ()) {
-        view.attach(track: nil)
+        view.attach(feed: nil)
     }
 }
 
 final class MacScreenView: NSView, RTCVideoViewDelegate {
     private let session: KVMSession
     private let videoView = RTCMTLNSVideoView(frame: .zero)
-    private var track: RTCVideoTrack?
+    private let layerView = LayerVideoView(frame: .zero)
+    private var feed: VideoFeed?
     private var keyboard = KeyboardState()
     private var buttons = 0
     private var scroll = ScrollAccumulator()
@@ -91,6 +92,8 @@ final class MacScreenView: NSView, RTCVideoViewDelegate {
         layer?.backgroundColor = NSColor.black.cgColor
         videoView.delegate = self
         addSubview(videoView)
+        layerView.onVideoSize = { [weak self] size in self?.videoSize = size }
+        addSubview(layerView)
         interceptor.handler = { [weak self] event in self?.handleKey(event) }
     }
 
@@ -104,11 +107,25 @@ final class MacScreenView: NSView, RTCVideoViewDelegate {
         return bounds.contains(local) ? self : nil
     }
 
-    func attach(track newTrack: RTCVideoTrack?) {
-        guard newTrack !== track else { return }
-        track?.remove(videoView)
-        track = newTrack
-        newTrack?.add(videoView)
+    /// Shows either the WebRTC renderer or the layer-based one, depending on the driver's feed.
+    func attach(feed newFeed: VideoFeed?) {
+        if let newFeed, newFeed.isSame(as: feed) { return }
+        if newFeed == nil, feed == nil { return }
+        if case .webRTC(let old) = feed { old.remove(videoView) }
+        if case .frames(let old) = feed, old.renderer === layerView { old.renderer = nil }
+        feed = newFeed
+        videoSize = .zero
+        layerView.reset()
+        switch newFeed {
+        case .webRTC(let track):
+            track.add(videoView)
+        case .frames(let stream):
+            stream.renderer = layerView
+        case nil:
+            break
+        }
+        videoView.isHidden = { if case .webRTC = newFeed { false } else { true } }()
+        layerView.isHidden = { if case .frames = newFeed { false } else { true } }()
     }
 
     private var currentVideoRect: CGRect {
@@ -118,6 +135,7 @@ final class MacScreenView: NSView, RTCVideoViewDelegate {
     override func layout() {
         super.layout()
         videoView.frame = currentVideoRect
+        layerView.frame = currentVideoRect
         aspectLock.viewDidLayout()
     }
 
@@ -321,21 +339,22 @@ extension RemoteScreenView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: TouchScreenView, context: Context) {
-        view.attach(track: session.videoTrack)
+        view.attach(feed: session.video)
         view.sourceSize = session.sourceSize
         view.onSoftwareKeyboardDismissed = { showsSoftwareKeyboard.wrappedValue = false }
         view.wantsSoftwareKeyboard = showsSoftwareKeyboard.wrappedValue
     }
 
     static func dismantleUIView(_ view: TouchScreenView, coordinator: ()) {
-        view.attach(track: nil)
+        view.attach(feed: nil)
     }
 }
 
 final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput, UIGestureRecognizerDelegate {
     let session: KVMSession
     private let videoView = RTCMTLVideoView(frame: .zero)
-    private var track: RTCVideoTrack?
+    private let layerView = LayerVideoView(frame: .zero)
+    private var feed: VideoFeed?
     private var keyboard = KeyboardState()
     private var buttons = 0
     private var lastLocation: CGPoint = .zero
@@ -396,6 +415,9 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput, UIGesture
         videoView.videoContentMode = .scaleToFill
         videoView.isUserInteractionEnabled = false
         addSubview(videoView)
+        layerView.isUserInteractionEnabled = false
+        layerView.onVideoSize = { [weak self] size in self?.videoSize = size }
+        addSubview(layerView)
 
         let hover = UIHoverGestureRecognizer(target: self, action: #selector(hovered(_:)))
         addGestureRecognizer(hover)
@@ -445,11 +467,25 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput, UIGesture
 
     required init?(coder: NSCoder) { fatalError() }
 
-    func attach(track newTrack: RTCVideoTrack?) {
-        guard newTrack !== track else { return }
-        track?.remove(videoView)
-        track = newTrack
-        newTrack?.add(videoView)
+    /// Shows either the WebRTC renderer or the layer-based one, depending on the driver's feed.
+    func attach(feed newFeed: VideoFeed?) {
+        if let newFeed, newFeed.isSame(as: feed) { return }
+        if newFeed == nil, feed == nil { return }
+        if case .webRTC(let old) = feed { old.remove(videoView) }
+        if case .frames(let old) = feed, old.renderer === layerView { old.renderer = nil }
+        feed = newFeed
+        videoSize = .zero
+        layerView.reset()
+        switch newFeed {
+        case .webRTC(let track):
+            track.add(videoView)
+        case .frames(let stream):
+            stream.renderer = layerView
+        case nil:
+            break
+        }
+        videoView.isHidden = { if case .webRTC = newFeed { false } else { true } }()
+        layerView.isHidden = { if case .frames = newFeed { false } else { true } }()
     }
 
     private var fitRect: CGRect {
@@ -466,6 +502,7 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput, UIGesture
             zoomedRect = nil
         }
         videoView.frame = currentVideoRect
+        layerView.frame = currentVideoRect
         resetZoomButton.isHidden = zoomedRect == nil
     }
 

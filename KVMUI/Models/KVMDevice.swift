@@ -1,12 +1,18 @@
 import Foundation
 
-/// A saved PicoKVM. The password lives in the Keychain, never in this struct.
+/// A saved KVM. The password lives in the Keychain, never in this struct.
 struct KVMDevice: Identifiable, Codable, Hashable {
     var id = UUID()
     var name: String
     /// Local network host or host:port, e.g. "10.1.0.16" or "picokvm.local".
     var host: String
     var useHTTPS = false
+    /// nil until detected on first connection (or chosen by hand).
+    var kind: DeviceKind?
+    /// For firmwares with user accounts (PiKVM, NanoKVM, TinyPilot).
+    var username: String?
+    /// Remote keyboard layout used for typing text, when the device doesn't store it itself.
+    var keyboardLayout: String?
     /// Address on the tailnet (100.x.y.z or MagicDNS name). Filled in automatically from the device.
     var tailscaleHost: String?
     /// Address on the ZeroTier network. Filled in automatically from the device.
@@ -25,9 +31,6 @@ struct KVMDevice: Identifiable, Codable, Hashable {
         URL(string: "\(useHTTPS ? "https" : "http")://\(route.host)")!
     }
 
-    func signalingURL(for route: Route) -> URL {
-        URL(string: "\(useHTTPS ? "wss" : "ws")://\(route.host)/webrtc/signaling/client")!
-    }
 }
 
 /// One network path to a device.
