@@ -52,7 +52,8 @@ IP-KVMs give you the screen, keyboard and mouse of another computer over the net
 
 ### 📱 Made for touch
 - **Pinch to zoom** up to 6×, two-finger pan, two-finger double-tap to zoom
-- **Tap to click, two-finger tap to right-click**, drag to drag
+- **Drag to scroll** like on a phone, **tap then drag** to select or move things
+- **Tap to click**, double tap to double-click, two-finger tap to right-click
 - **Virtual keyboard** with an extra-keys bar: Esc, Tab, sticky Ctrl/Alt/Win, arrows, F1–F12
 - Hardware keyboards and iPad trackpads work natively
 
@@ -86,10 +87,12 @@ The device type is **detected automatically** when you connect. Each driver was 
 | On macOS | | On iPhone / iPad | |
 |---|---|---|---|
 | Click the screen | Capture keyboard | Tap | Click |
-| <kbd>⌃</kbd><kbd>⌥</kbd><kbd>⌘</kbd> | Release keyboard | Drag | Drag / select |
-| Trackpad scroll | Mouse wheel | Two-finger tap | Right-click |
-| Toolbar › Remote keyboard | Ctrl+Alt+Del, layouts, paste | Pinch | Zoom (up to 6×) |
-| Toolbar › Capture ⌘ | Toggle shortcut capture | Two-finger drag | Pan while zoomed |
+| <kbd>⌃</kbd><kbd>⌥</kbd><kbd>⌘</kbd> | Release keyboard | Drag | Scroll, with momentum |
+| Trackpad scroll | Mouse wheel | Tap, then drag | Hold the button: select, move windows |
+| Toolbar › Remote keyboard | Ctrl+Alt+Del, layouts, paste | Double tap | Double-click |
+| Toolbar › Capture ⌘ | Toggle shortcut capture | Two-finger tap | Right-click |
+| | | Pinch | Zoom (up to 6×) |
+| | | Two-finger drag | Pan while zoomed |
 | | | Two-finger double-tap | Zoom in / fit |
 
 ## How it works

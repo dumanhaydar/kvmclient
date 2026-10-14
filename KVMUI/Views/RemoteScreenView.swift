@@ -368,12 +368,25 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput, UIGesture
     private var pinch: UIPinchGestureRecognizer!
     private var twoFingerPan: UIPanGestureRecognizer!
 
-    // Finger as mouse: the press is held back briefly so a second finger (zoom/pan/right-click)
-    // can arrive without the remote machine seeing a click or a drag.
+    // One finger works like a phone touchscreen: drag scrolls the remote content, tap clicks,
+    // tap-then-drag holds the button (select, move windows), double tap double-clicks.
+    private enum FingerMode { case idle, undecided, scrolling, dragging, pointer }
+    private var fingerMode = FingerMode.idle
     private var trackedTouch: UITouch?
     private var touchStart: CGPoint = .zero
-    private var pendingPress: DispatchWorkItem?
-    private var pressSent = false
+    private var touchStartTime: TimeInterval = 0
+    private var dragMoved = false
+    /// A tap waits briefly before clicking, in case it's the first half of tap-then-drag.
+    private var pendingTap: (point: CGPoint, work: DispatchWorkItem)?
+    private var lastScrollPoint: CGPoint = .zero
+    private var lastScrollTime: TimeInterval = 0
+    private var scrollVelocity: CGFloat = 0
+    private var momentum: CADisplayLink?
+    private var touchScroll: ScrollAccumulator = {
+        var accumulator = ScrollAccumulator()
+        accumulator.pointsPerNotch = 20
+        return accumulator
+    }()
 
     // Software keyboard state (see VirtualKeyboard.swift).
     var wantsSoftwareKeyboard = false {
@@ -584,7 +597,7 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput, UIGesture
 
     override func didMoveToWindow() {
         super.didMoveToWindow()
-        if window != nil { becomeFirstResponder() }
+        if window != nil { becomeFirstResponder() } else { stopMomentum() }
     }
 
     override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
@@ -633,6 +646,9 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput, UIGesture
         return buttons == 0 ? 1 : buttons
     }
 
+    private static let tapThenDragDelay: TimeInterval = 0.25
+    private static let movementThreshold: CGFloat = 10
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         if !isFirstResponder { becomeFirstResponder() }
         if (event?.allTouches?.count ?? touches.count) > 1 {
@@ -641,42 +657,85 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput, UIGesture
             return
         }
         guard trackedTouch == nil, let touch = touches.first else { return }
+        stopMomentum()
         trackedTouch = touch
         touchStart = touch.location(in: self)
+        touchStartTime = touch.timestamp
+
         if touch.type == .indirectPointer {
-            // Trackpad / mouse click on iPad: no ambiguity, press right away.
-            pressFinger(at: touchStart, buttons: Self.buttons(for: event))
+            // Trackpad / mouse on iPad: a real pointer, press right away.
+            fingerMode = .pointer
+            buttons = Self.buttons(for: event)
+            sendMouse(at: touchStart)
+        } else if let tap = pendingTap, hypot(tap.point.x - touchStart.x, tap.point.y - touchStart.y) < 44 {
+            // Tap, then touch again: hold the button. Moving drags; lifting at once double-clicks.
+            tap.work.cancel()
+            pendingTap = nil
+            fingerMode = .dragging
+            dragMoved = false
+            buttons = 1
+            sendMouse(at: touchStart)
         } else {
-            let work = DispatchWorkItem { [weak self] in
-                guard let self, self.trackedTouch === touch else { return }
-                self.pressFinger(at: touch.location(in: self), buttons: 1)
-            }
-            pendingPress = work
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: work)
+            fingerMode = .undecided
         }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = trackedTouch, touches.contains(touch) else { return }
         let location = touch.location(in: self)
-        if pendingPress != nil, hypot(location.x - touchStart.x, location.y - touchStart.y) > 8 {
-            pressFinger(at: touchStart, buttons: 1)
+        let distance = hypot(location.x - touchStart.x, location.y - touchStart.y)
+        switch fingerMode {
+        case .undecided:
+            guard distance > Self.movementThreshold else { return }
+            fingerMode = .scrolling
+            // Put the pointer under the finger so the wheel scrolls what the user is touching.
+            buttons = 0
+            sendMouse(at: touchStart)
+            touchScroll.reset()
+            scrollVelocity = 0
+            lastScrollPoint = touchStart
+            lastScrollTime = touch.timestamp
+            scroll(to: location, at: touch.timestamp)
+        case .scrolling:
+            scroll(to: location, at: touch.timestamp)
+        case .dragging:
+            if distance > Self.movementThreshold { dragMoved = true }
+            sendMouse(at: location)
+        case .pointer:
+            sendMouse(at: location)
+        case .idle:
+            break
         }
-        if pressSent { sendMouse(at: location) }
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = trackedTouch, touches.contains(touch) else { return }
-        let isTap = pendingPress != nil
-        if isTap {
-            // Quick tap: click where the finger landed.
-            pressFinger(at: touchStart, buttons: 1)
-        }
-        if pressSent {
+        let location = touch.location(in: self)
+        switch fingerMode {
+        case .undecided:
+            let point = touchStart
+            let work = DispatchWorkItem { [weak self] in
+                self?.pendingTap = nil
+                self?.click(at: point)
+            }
+            pendingTap = (point, work)
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.tapThenDragDelay, execute: work)
+        case .scrolling:
+            startMomentum()
+        case .dragging:
             buttons = 0
-            sendMouse(at: isTap ? touchStart : touch.location(in: self))
+            sendMouse(at: location)
+            if !dragMoved, touch.timestamp - touchStartTime < 0.3 {
+                click(at: location) // second click of a double tap
+            }
+        case .pointer:
+            buttons = 0
+            sendMouse(at: location)
+        case .idle:
+            break
         }
-        resetFingerMouse()
+        trackedTouch = nil
+        fingerMode = .idle
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -684,28 +743,60 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput, UIGesture
         cancelFingerMouse()
     }
 
-    private func pressFinger(at point: CGPoint, buttons: Int) {
-        pendingPress?.cancel()
-        pendingPress = nil
-        self.buttons = buttons
-        pressSent = true
+    private func click(at point: CGPoint) {
+        buttons = 1
+        sendMouse(at: point)
+        buttons = 0
         sendMouse(at: point)
     }
 
-    /// Abandons the current finger: releases the button if the press already went out.
+    /// Abandons the current finger, releasing the button if it was held.
     private func cancelFingerMouse() {
-        if pressSent {
+        if buttons != 0 {
             buttons = 0
             sendMouse(at: lastLocation)
         }
-        resetFingerMouse()
+        trackedTouch = nil
+        fingerMode = .idle
     }
 
-    private func resetFingerMouse() {
-        pendingPress?.cancel()
-        pendingPress = nil
-        pressSent = false
-        trackedTouch = nil
+    // MARK: Touch scrolling
+
+    /// Content follows the finger: dragging down scrolls up (positive wheel).
+    private func scroll(to location: CGPoint, at time: TimeInterval) {
+        let delta = location.y - lastScrollPoint.y
+        let elapsed = time - lastScrollTime
+        if elapsed > 0 {
+            scrollVelocity = 0.7 * scrollVelocity + 0.3 * (delta / elapsed)
+        }
+        lastScrollPoint = location
+        lastScrollTime = time
+        scroll(by: delta)
+    }
+
+    private func scroll(by delta: CGFloat) {
+        let notches = touchScroll.notches(for: delta, precise: true)
+        if notches != 0 { session.sendWheel(notches) }
+    }
+
+    private func startMomentum() {
+        guard abs(scrollVelocity) > 250 else { return }
+        scrollVelocity = max(-2500, min(2500, scrollVelocity))
+        let link = CADisplayLink(target: self, selector: #selector(momentumStep(_:)))
+        link.add(to: .main, forMode: .common)
+        momentum = link
+    }
+
+    @objc private func momentumStep(_ link: CADisplayLink) {
+        let elapsed = link.targetTimestamp - link.timestamp
+        scrollVelocity *= pow(0.94, elapsed * 60)
+        scroll(by: scrollVelocity * elapsed)
+        if abs(scrollVelocity) < 60 { stopMomentum() }
+    }
+
+    private func stopMomentum() {
+        momentum?.invalidate()
+        momentum = nil
     }
 
     @objc private func rightClick(_ recognizer: UITapGestureRecognizer) {
