@@ -4,12 +4,10 @@
 <dict>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
 	</dict>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>KVM Client se connecte à vos KVM sur le réseau local.</string>
 </dict>
 </plist>

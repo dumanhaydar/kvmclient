@@ -11,7 +11,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		A10000000000000000000101 /* KVMUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KVMUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000101 /* KVM Client.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "KVM Client.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -51,7 +51,7 @@
 		A10000000000000000000602 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000101 /* KVMUI.app */,
+				A10000000000000000000101 /* KVM Client.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -79,7 +79,7 @@
 				A10000000000000000000401 /* WebRTC */,
 			);
 			productName = KVMUI;
-			productReference = A10000000000000000000101 /* KVMUI.app */;
+			productReference = A10000000000000000000101 /* KVM Client.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -251,12 +251,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 7UFR9PD47M;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "KVM Client";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "KVM Client se connecte à vos KVM sur le réseau local.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphone*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphone*]" = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = NO;
@@ -285,12 +287,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 7UFR9PD47M;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "KVM Client";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "KVM Client se connecte à vos KVM sur le réseau local.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphone*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphone*]" = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = NO;
