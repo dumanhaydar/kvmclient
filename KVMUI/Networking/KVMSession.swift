@@ -23,6 +23,11 @@ final class KVMSession {
     private(set) var sourceSize: CGSize = .zero
     /// nil when HDMI is fine; otherwise the device's reason (no_signal, no_lock, out_of_range...).
     private(set) var videoError: String?
+    /// The network path in use for the current connection.
+    private(set) var activeRoute: Route?
+    /// Called when the device reports its Tailscale / ZeroTier addresses, so they can be saved
+    /// and used next time the local network isn't reachable.
+    @ObservationIgnored var onOverlayAddresses: ((_ tailscale: String?, _ zeroTier: String?) -> Void)?
     /// Remote keyboard layout code ("fr-BE", "en_US"...), as configured on the device.
     private(set) var keyboardLayout: String?
 
@@ -56,9 +61,18 @@ final class KVMSession {
 
     func connect(password: String?) async {
         disconnect()
-        let api = KVMAPI(device: device)
+        state = .connecting("Recherche du KVM…")
+        guard let api = await reachableAPI() else {
+            let tried = device.routes.map { "\($0.kind.title) (\($0.host))" }.joined(separator: ", ")
+            var message = "Aucune adresse ne répond : \(tried)."
+            if device.routes.contains(where: { $0.kind != .local }) {
+                message += " Vérifie que Tailscale ou ZeroTier est actif sur cet appareil."
+            }
+            return fail(message)
+        }
         self.api = api
-        state = .connecting("Connexion au KVM…")
+        activeRoute = api.route
+        state = .connecting("Connexion via \(api.route.kind.title)…")
         do {
             guard try await api.status().isSetup else { throw KVMError.notSetUp }
             if try await api.deviceInfo() == nil {
@@ -81,6 +95,30 @@ final class KVMSession {
         }
     }
 
+    /// Probes every route at once and keeps the most preferred one that answers
+    /// (local network first, then Tailscale, then ZeroTier).
+    private func reachableAPI() async -> KVMAPI? {
+        let candidates = device.routes.map { KVMAPI(device: device, route: $0) }
+        let reachable = await withTaskGroup(of: (Int, Bool).self) { group in
+            for (index, api) in candidates.enumerated() {
+                group.addTask { (index, await api.probe()) }
+            }
+            var results: [Int: Bool] = [:]
+            for await (index, ok) in group {
+                results[index] = ok
+                // Stop waiting as soon as nothing better than the best success can still answer.
+                if let best = results.filter(\.value).keys.min(),
+                   (0..<best).allSatisfy({ results[$0] != nil }) { break }
+            }
+            group.cancelAll()
+            return results.filter(\.value).keys.min()
+        }
+        for (index, api) in candidates.enumerated() where index != reachable {
+            api.invalidate()
+        }
+        return reachable.map { candidates[$0] }
+    }
+
     func disconnect() {
         signaling?.close()
         signaling = nil
@@ -99,6 +137,7 @@ final class KVMSession {
         iceGatheringComplete?.resume()
         iceGatheringComplete = nil
         failPendingRPC()
+        activeRoute = nil
         if case .connected = state { state = .idle }
         if case .connecting = state { state = .idle }
     }
@@ -112,7 +151,7 @@ final class KVMSession {
     // MARK: - Signaling
 
     private func openSignaling(api: KVMAPI) {
-        let channel = SignalingChannel(url: device.signalingURL, session: api.session)
+        let channel = SignalingChannel(url: device.signalingURL(for: api.route), session: api.session)
         channel.onMessage = { [weak self] type, data in
             Task { @MainActor in self?.handleSignaling(type: type, data: data) }
         }
@@ -295,6 +334,27 @@ final class KVMSession {
         call("getKeyboardLayout") { [weak self] result in
             if case .success(let layout as String) = result { self?.keyboardLayout = layout }
         }
+        fetchOverlayAddresses()
+    }
+
+    /// Asks the device for its Tailscale and ZeroTier IPs (the web UI's network settings).
+    private func fetchOverlayAddresses() {
+        Task {
+            async let tailscale = callAndWait("getTailScaleSettings")
+            async let zeroTier = callAndWait("getZeroTierSettings")
+            let addresses = (Self.overlayIP(await tailscale), Self.overlayIP(await zeroTier))
+            if addresses.0 != nil || addresses.1 != nil {
+                onOverlayAddresses?(addresses.0, addresses.1)
+            }
+        }
+    }
+
+    /// `{"state": "connected"|"logined"|..., "ip": "100.x.y.z/32"}` → "100.x.y.z" when joined.
+    private static func overlayIP(_ result: Result<Any?, Error>) -> String? {
+        guard case .success(let value as [String: Any]) = result,
+              let ip = value["ip"] as? String, !ip.isEmpty else { return nil }
+        let address = ip.split(separator: "/").first.map(String.init) ?? ip
+        return address.isEmpty ? nil : address
     }
 
     func setKeyboardLayout(_ code: String) {

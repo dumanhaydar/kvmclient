@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SessionView: View {
+    @Environment(DeviceStore.self) private var store
     @State private var session: KVMSession
     @State private var password = ""
     @State private var rememberPassword = true
@@ -66,11 +67,20 @@ struct SessionView: View {
             }
         }
         .navigationTitle(session.device.name)
+        #if os(macOS)
+        .navigationSubtitle(session.activeRoute.map { "via \($0.kind.title) · \($0.host)" } ?? "")
+        #endif
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar { toolbar }
-        .task { connect() }
+        .task {
+            let id = session.device.id
+            session.onOverlayAddresses = { [store] tailscale, zeroTier in
+                store.updateOverlayAddresses(for: id, tailscale: tailscale, zeroTier: zeroTier)
+            }
+            connect()
+        }
         .onDisappear { session.disconnect() }
         .onChange(of: session.state) { _, state in
             guard state == .connected else { return }
@@ -92,6 +102,12 @@ struct SessionView: View {
     private var toolbar: some ToolbarContent {
         ToolbarItemGroup {
             #if os(iOS)
+            if let route = session.activeRoute, session.state == .connected {
+                Label("via \(route.kind.title)", systemImage: route.kind.systemImage)
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("Connecté via \(route.kind.title)")
+            }
             Button {
                 showsSoftwareKeyboard.toggle()
             } label: {

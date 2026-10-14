@@ -4,15 +4,54 @@ import Foundation
 struct KVMDevice: Identifiable, Codable, Hashable {
     var id = UUID()
     var name: String
-    /// Host or host:port, e.g. "10.1.0.16" or "picokvm.local".
+    /// Local network host or host:port, e.g. "10.1.0.16" or "picokvm.local".
     var host: String
     var useHTTPS = false
+    /// Address on the tailnet (100.x.y.z or MagicDNS name). Filled in automatically from the device.
+    var tailscaleHost: String?
+    /// Address on the ZeroTier network. Filled in automatically from the device.
+    var zeroTierHost: String?
 
-    var baseURL: URL {
-        URL(string: "\(useHTTPS ? "https" : "http")://\(host)")!
+    /// Every configured way to reach the device, most preferred first.
+    var routes: [Route] {
+        [Route(kind: .local, host: host),
+         tailscaleHost.map { Route(kind: .tailscale, host: $0) },
+         zeroTierHost.map { Route(kind: .zeroTier, host: $0) }]
+            .compactMap { $0 }
+            .filter { !$0.host.isEmpty }
     }
 
-    var signalingURL: URL {
-        URL(string: "\(useHTTPS ? "wss" : "ws")://\(host)/webrtc/signaling/client")!
+    func baseURL(for route: Route) -> URL {
+        URL(string: "\(useHTTPS ? "https" : "http")://\(route.host)")!
     }
+
+    func signalingURL(for route: Route) -> URL {
+        URL(string: "\(useHTTPS ? "wss" : "ws")://\(route.host)/webrtc/signaling/client")!
+    }
+}
+
+/// One network path to a device.
+struct Route: Hashable {
+    enum Kind: String {
+        case local, tailscale, zeroTier
+
+        var title: String {
+            switch self {
+            case .local: "Réseau local"
+            case .tailscale: "Tailscale"
+            case .zeroTier: "ZeroTier"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .local: "wifi"
+            case .tailscale: "point.3.connected.trianglepath.dotted"
+            case .zeroTier: "network"
+            }
+        }
+    }
+
+    let kind: Kind
+    let host: String
 }

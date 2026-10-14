@@ -15,7 +15,15 @@ struct DeviceListView: View {
                         Label {
                             VStack(alignment: .leading) {
                                 Text(device.name)
-                                Text(device.host).font(.caption).foregroundStyle(.secondary)
+                                HStack(spacing: 4) {
+                                    Text(device.host)
+                                    ForEach(device.routes.dropFirst(), id: \.self) { route in
+                                        Image(systemName: route.kind.systemImage)
+                                            .help("\(route.kind.title) : \(route.host)")
+                                    }
+                                }
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                             }
                         } icon: {
                             Image(systemName: "display")

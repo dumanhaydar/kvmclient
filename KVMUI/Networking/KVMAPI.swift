@@ -21,10 +21,14 @@ enum KVMError: LocalizedError {
 /// and reused by the signaling WebSocket.
 final class KVMAPI: NSObject, URLSessionDelegate {
     let device: KVMDevice
+    let route: Route
+    let baseURL: URL
     private(set) var session: URLSession!
 
-    init(device: KVMDevice) {
+    init(device: KVMDevice, route: Route) {
         self.device = device
+        self.route = route
+        baseURL = device.baseURL(for: route)
         super.init()
         let config = URLSessionConfiguration.ephemeral
         config.httpCookieAcceptPolicy = .always
@@ -41,6 +45,14 @@ final class KVMAPI: NSObject, URLSessionDelegate {
 
     func status() async throws -> Status {
         try await get("/device/status")
+    }
+
+    /// Quick reachability check used to pick a route; doesn't need auth.
+    func probe(timeout: TimeInterval = 2.5) async -> Bool {
+        var request = URLRequest(url: url("/device/status"))
+        request.timeoutInterval = timeout
+        guard let (_, response) = try? await session.data(for: request) else { return false }
+        return (response as? HTTPURLResponse)?.statusCode == 200
     }
 
     /// Returns nil when the session isn't authenticated yet.
@@ -103,7 +115,7 @@ final class KVMAPI: NSObject, URLSessionDelegate {
     }
 
     func url(_ path: String) -> URL {
-        device.baseURL.appending(path: path)
+        baseURL.appending(path: path)
     }
 
     private func get<T: Decodable>(_ path: String) async throws -> T {
@@ -120,7 +132,7 @@ final class KVMAPI: NSObject, URLSessionDelegate {
         -> (URLSession.AuthChallengeDisposition, URLCredential?) {
         if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
            device.useHTTPS,
-           challenge.protectionSpace.host == device.baseURL.host(),
+           challenge.protectionSpace.host == baseURL.host(),
            let trust = challenge.protectionSpace.serverTrust {
             return (.useCredential, URLCredential(trust: trust))
         }
