@@ -61,6 +61,7 @@ IP-KVMs give you the screen, keyboard and mouse of another computer over the net
 <td valign="top">
 
 ### 🌍 Anywhere, securely
+- **Finds your KVMs** — one tap sweeps the local network and recognizes every supported device
 - **Tailscale & ZeroTier**: addresses are learned from the device and tried automatically
 - Picks the **fastest route** — local network first, then your overlay networks
 - Passwords live in the **Keychain**; self-signed HTTPS is trusted per device only
@@ -80,7 +81,7 @@ IP-KVMs give you the screen, keyboard and mouse of another computer over the net
 | **Sipeed NanoKVM** · NanoKVM-Pro | H.264 over WebSocket → MJPEG fallback | Binary HID reports | 🧪 Implemented, needs testers |
 | **TinyPilot** | MJPEG or Janus H.264 | Socket.IO | 🧪 Implemented, needs testers |
 
-The device type is **detected automatically** when you connect. Each driver was written from the device's open-source firmware and web UI. If you own one of the 🧪 devices, a quick report (even “it works!”) is hugely appreciated — [open an issue](../../issues).
+Use **Search the network** to find devices automatically, or add one by address; the device type is **detected automatically** when you connect. Each driver was written from the device's open-source firmware and web UI. If you own one of the 🧪 devices, a quick report (even “it works!”) is hugely appreciated — [open an issue](../../issues).
 
 ## Gestures & shortcuts
 
@@ -156,7 +157,6 @@ Tools/
 - [ ] Audio
 - [ ] Relative mouse mode for systems that ignore absolute pointers
 - [ ] JetKVM binary HID channel (`hidrpc`) for even lower input latency
-- [ ] Bonjour discovery of devices on the local network
 - [ ] Multiple sessions in tabs / windows
 
 ## Contributing

@@ -2,6 +2,8 @@ import SwiftUI
 
 struct DeviceEditorView: View {
     let device: KVMDevice?
+    /// Prefilled values for a new device (e.g. one found on the network).
+    var draft: KVMDevice?
     let onSave: (KVMDevice, String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -68,7 +70,7 @@ struct DeviceEditorView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Enregistrer") {
-                        var saved = device ?? KVMDevice(name: "", host: "")
+                        var saved = device ?? draft ?? KVMDevice(name: "", host: "")
                         saved.name = name.isEmpty ? (kind?.shortTitle ?? "KVM") : name
                         saved.kind = kind
                         saved.username = Self.optional(username)
@@ -87,6 +89,7 @@ struct DeviceEditorView: View {
         .frame(minWidth: 440, minHeight: 460)
         #endif
         .onAppear {
+            let device = device ?? draft
             name = device?.name ?? ""
             host = device?.host ?? ""
             useHTTPS = device?.useHTTPS ?? false

@@ -5,6 +5,7 @@ struct DeviceListView: View {
     @State private var selection: KVMDevice.ID?
     @State private var editing: KVMDevice?
     @State private var isAdding = false
+    @State private var isDiscovering = false
     @State private var columnVisibility = NavigationSplitViewVisibility.automatic
 
     var body: some View {
@@ -38,6 +39,9 @@ struct DeviceListView: View {
             .navigationTitle("KVM")
             .toolbar {
                 ToolbarItem {
+                    Button("Rechercher sur le réseau", systemImage: "dot.radiowaves.left.and.right") { isDiscovering = true }
+                }
+                ToolbarItem {
                     Button("Ajouter", systemImage: "plus") { isAdding = true }
                 }
             }
@@ -46,7 +50,9 @@ struct DeviceListView: View {
                     ContentUnavailableView {
                         Label("Aucun KVM", systemImage: "display")
                     } actions: {
-                        Button("Ajouter un PicoKVM") { isAdding = true }
+                        Button("Rechercher sur le réseau") { isDiscovering = true }
+                            .buttonStyle(.borderedProminent)
+                        Button("Ajouter à la main") { isAdding = true }
                     }
                 }
             }
@@ -63,6 +69,12 @@ struct DeviceListView: View {
         }
         .sheet(isPresented: $isAdding) {
             DeviceEditorView(device: nil) { device, password in
+                store.save(device, password: password)
+                selection = device.id
+            }
+        }
+        .sheet(isPresented: $isDiscovering) {
+            DiscoveryView { device, password in
                 store.save(device, password: password)
                 selection = device.id
             }
