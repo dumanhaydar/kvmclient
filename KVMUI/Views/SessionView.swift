@@ -11,8 +11,12 @@ struct SessionView: View {
     @State private var accessibilityTrusted = SystemKeyInterceptor.isTrusted
     #endif
 
-    init(device: KVMDevice) {
+    /// Collapsed while connected so the remote screen gets the whole window.
+    @Binding var columnVisibility: NavigationSplitViewVisibility
+
+    init(device: KVMDevice, columnVisibility: Binding<NavigationSplitViewVisibility>) {
         _session = State(initialValue: KVMSession(device: device))
+        _columnVisibility = columnVisibility
     }
 
     var body: some View {
@@ -23,7 +27,9 @@ struct SessionView: View {
                 RemoteScreenView(session: session,
                                  capturesSystemShortcuts: capturesShortcuts,
                                  showsSoftwareKeyboard: $showsSoftwareKeyboard)
+                    #if os(iOS)
                     .ignoresSafeArea(.container)
+                    #endif
                 #if os(macOS)
                 if showsReleaseHint {
                     Text(accessibilityTrusted && capturesShortcuts
@@ -68,6 +74,7 @@ struct SessionView: View {
         .onDisappear { session.disconnect() }
         .onChange(of: session.state) { _, state in
             guard state == .connected else { return }
+            withAnimation { columnVisibility = .detailOnly }
             showsReleaseHint = true
             Task {
                 try? await Task.sleep(for: .seconds(5))

@@ -75,8 +75,14 @@ final class MacScreenView: NSView, RTCVideoViewDelegate {
     var capturesSystemShortcuts = true { didSet { updateCapture() } }
 
     /// Frame size from the decoder; falls back to the device-reported HDMI resolution.
-    private var videoSize: CGSize = .zero { didSet { needsLayout = true } }
+    private var videoSize: CGSize = .zero {
+        didSet {
+            needsLayout = true
+            aspectLock.videoSize = videoSize == .zero ? nil : videoSize
+        }
+    }
     var sourceSize: CGSize = .zero { didSet { if videoSize == .zero { needsLayout = true } } }
+    private lazy var aspectLock = WindowAspectLock(view: self)
 
     init(session: KVMSession) {
         self.session = session
@@ -112,6 +118,7 @@ final class MacScreenView: NSView, RTCVideoViewDelegate {
     override func layout() {
         super.layout()
         videoView.frame = currentVideoRect
+        aspectLock.viewDidLayout()
     }
 
     func videoView(_ videoView: RTCVideoRenderer, didChangeVideoSize size: CGSize) {
@@ -125,8 +132,10 @@ final class MacScreenView: NSView, RTCVideoViewDelegate {
         removeObservers()
         guard let window else {
             interceptor.stop()
+            aspectLock.detach()
             return
         }
+        aspectLock.attach(to: window)
         window.makeFirstResponder(self)
         // Fallback when the Accessibility permission isn't granted: a local monitor still sees key
         // events before the menu bar, so ⌘Q, ⌘W, ⌘H... reach the remote machine (but not ⌘Tab/⌘Space).
@@ -153,6 +162,7 @@ final class MacScreenView: NSView, RTCVideoViewDelegate {
     deinit {
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
         interceptor.stop()
+        aspectLock.detach()
     }
 
     @objc private func windowKeyChanged() {
@@ -322,7 +332,7 @@ extension RemoteScreenView: UIViewRepresentable {
     }
 }
 
-final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput {
+final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput, UIGestureRecognizerDelegate {
     let session: KVMSession
     private let videoView = RTCMTLVideoView(frame: .zero)
     private var track: RTCVideoTrack?
@@ -330,6 +340,21 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput {
     private var buttons = 0
     private var lastLocation: CGPoint = .zero
     private var scroll = ScrollAccumulator()
+
+    // Zoom: nil shows the whole remote screen; otherwise the rect the video occupies (larger than fit).
+    private var zoomedRect: CGRect?
+    private var lastBoundsSize: CGSize = .zero
+    private static let maxZoom: CGFloat = 6
+    private let resetZoomButton = UIButton(type: .system)
+    private var pinch: UIPinchGestureRecognizer!
+    private var twoFingerPan: UIPanGestureRecognizer!
+
+    // Finger as mouse: the press is held back briefly so a second finger (zoom/pan/right-click)
+    // can arrive without the remote machine seeing a click or a drag.
+    private var trackedTouch: UITouch?
+    private var touchStart: CGPoint = .zero
+    private var pendingPress: DispatchWorkItem?
+    private var pressSent = false
 
     // Software keyboard state (see VirtualKeyboard.swift).
     var wantsSoftwareKeyboard = false {
@@ -365,7 +390,8 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput {
         self.session = session
         super.init(frame: .zero)
         backgroundColor = .black
-        isMultipleTouchEnabled = false
+        isMultipleTouchEnabled = true
+        clipsToBounds = true
         videoView.delegate = self
         videoView.videoContentMode = .scaleToFill
         videoView.isUserInteractionEnabled = false
@@ -379,6 +405,42 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput {
         scrollPan.allowedScrollTypesMask = .all
         scrollPan.allowedTouchTypes = []
         addGestureRecognizer(scrollPan)
+
+        pinch = UIPinchGestureRecognizer(target: self, action: #selector(pinched(_:)))
+        pinch.delegate = self
+        addGestureRecognizer(pinch)
+
+        twoFingerPan = UIPanGestureRecognizer(target: self, action: #selector(panned(_:)))
+        twoFingerPan.minimumNumberOfTouches = 2
+        twoFingerPan.maximumNumberOfTouches = 2
+        twoFingerPan.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
+        twoFingerPan.delegate = self
+        addGestureRecognizer(twoFingerPan)
+
+        let twoFingerDoubleTap = UITapGestureRecognizer(target: self, action: #selector(toggleZoom(_:)))
+        twoFingerDoubleTap.numberOfTouchesRequired = 2
+        twoFingerDoubleTap.numberOfTapsRequired = 2
+        addGestureRecognizer(twoFingerDoubleTap)
+
+        let twoFingerTap = UITapGestureRecognizer(target: self, action: #selector(rightClick(_:)))
+        twoFingerTap.numberOfTouchesRequired = 2
+        twoFingerTap.require(toFail: twoFingerDoubleTap)
+        addGestureRecognizer(twoFingerTap)
+
+        var config = UIButton.Configuration.filled()
+        config.image = UIImage(systemName: "arrow.down.right.and.arrow.up.left")
+        config.baseBackgroundColor = UIColor.black.withAlphaComponent(0.55)
+        config.baseForegroundColor = .white
+        config.cornerStyle = .capsule
+        resetZoomButton.configuration = config
+        resetZoomButton.addAction(UIAction { [weak self] _ in self?.setZoom(nil, animated: true) }, for: .primaryActionTriggered)
+        resetZoomButton.isHidden = true
+        resetZoomButton.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(resetZoomButton)
+        NSLayoutConstraint.activate([
+            resetZoomButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 12),
+            resetZoomButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -12),
+        ])
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -390,13 +452,89 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput {
         newTrack?.add(videoView)
     }
 
-    private var currentVideoRect: CGRect {
+    private var fitRect: CGRect {
         ScreenGeometry.videoRect(videoSize: videoSize == .zero ? sourceSize : videoSize, in: bounds)
     }
 
+    private var currentVideoRect: CGRect { zoomedRect ?? fitRect }
+
     override func layoutSubviews() {
         super.layoutSubviews()
+        if bounds.size != lastBoundsSize {
+            // Rotation / resize: start again from the whole screen.
+            lastBoundsSize = bounds.size
+            zoomedRect = nil
+        }
         videoView.frame = currentVideoRect
+        resetZoomButton.isHidden = zoomedRect == nil
+    }
+
+    // MARK: Zoom & pan
+
+    /// Clamps `rect` so the video never leaves empty space on a side it overflows, and centres it
+    /// on axes where it's smaller than the view. Back to nil (fit) at 1×.
+    private func setZoom(_ rect: CGRect?, animated: Bool = false) {
+        let fit = fitRect
+        var newRect: CGRect?
+        if var rect, rect.width > fit.width + 0.5 {
+            for axis in [\CGRect.origin.x, \CGRect.origin.y] {
+                let isX = axis == \CGRect.origin.x
+                let length = isX ? rect.width : rect.height
+                let available = isX ? bounds.width : bounds.height
+                let origin = rect[keyPath: axis]
+                rect[keyPath: axis] = length > available
+                    ? min(max(origin, available - length), 0)
+                    : (available - length) / 2
+            }
+            newRect = rect
+        }
+        zoomedRect = newRect
+        if animated {
+            UIView.animate(withDuration: 0.25) { self.setNeedsLayout(); self.layoutIfNeeded() }
+        } else {
+            setNeedsLayout()
+            layoutIfNeeded()
+        }
+    }
+
+    private func zoom(by factor: CGFloat, around anchor: CGPoint, animated: Bool = false) {
+        let rect = currentVideoRect
+        let fit = fitRect
+        guard rect.width > 0 else { return }
+        let width = min(max(rect.width * factor, fit.width), fit.width * Self.maxZoom)
+        let scale = width / rect.width
+        setZoom(CGRect(x: anchor.x - (anchor.x - rect.minX) * scale,
+                       y: anchor.y - (anchor.y - rect.minY) * scale,
+                       width: rect.width * scale, height: rect.height * scale), animated: animated)
+    }
+
+    @objc private func pinched(_ recognizer: UIPinchGestureRecognizer) {
+        cancelFingerMouse()
+        guard recognizer.numberOfTouches >= 2 || recognizer.state == .changed else { return }
+        zoom(by: recognizer.scale, around: recognizer.location(in: self))
+        recognizer.scale = 1
+    }
+
+    @objc private func panned(_ recognizer: UIPanGestureRecognizer) {
+        cancelFingerMouse()
+        let translation = recognizer.translation(in: self)
+        recognizer.setTranslation(.zero, in: self)
+        guard let rect = zoomedRect else { return }
+        setZoom(rect.offsetBy(dx: translation.x, dy: translation.y))
+    }
+
+    @objc private func toggleZoom(_ recognizer: UITapGestureRecognizer) {
+        if zoomedRect == nil {
+            zoom(by: 2.5, around: recognizer.location(in: self), animated: true)
+        } else {
+            setZoom(nil, animated: true)
+        }
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        let zoomGestures: [UIGestureRecognizer] = [pinch, twoFingerPan]
+        return zoomGestures.contains(gestureRecognizer) && zoomGestures.contains(other)
     }
 
     func videoView(_ videoView: RTCVideoRenderer, didChangeVideoSize size: CGSize) {
@@ -459,24 +597,86 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first else { return }
         if !isFirstResponder { becomeFirstResponder() }
-        buttons = Self.buttons(for: event)
-        sendMouse(at: touch.location(in: self))
+        if (event?.allTouches?.count ?? touches.count) > 1 {
+            // A second finger: this is a zoom, pan or right-click, not a mouse action.
+            cancelFingerMouse()
+            return
+        }
+        guard trackedTouch == nil, let touch = touches.first else { return }
+        trackedTouch = touch
+        touchStart = touch.location(in: self)
+        if touch.type == .indirectPointer {
+            // Trackpad / mouse click on iPad: no ambiguity, press right away.
+            pressFinger(at: touchStart, buttons: Self.buttons(for: event))
+        } else {
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, self.trackedTouch === touch else { return }
+                self.pressFinger(at: touch.location(in: self), buttons: 1)
+            }
+            pendingPress = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: work)
+        }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first else { return }
-        sendMouse(at: touch.location(in: self))
+        guard let touch = trackedTouch, touches.contains(touch) else { return }
+        let location = touch.location(in: self)
+        if pendingPress != nil, hypot(location.x - touchStart.x, location.y - touchStart.y) > 8 {
+            pressFinger(at: touchStart, buttons: 1)
+        }
+        if pressSent { sendMouse(at: location) }
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        buttons = 0
-        sendMouse(at: touches.first?.location(in: self) ?? lastLocation)
+        guard let touch = trackedTouch, touches.contains(touch) else { return }
+        let isTap = pendingPress != nil
+        if isTap {
+            // Quick tap: click where the finger landed.
+            pressFinger(at: touchStart, buttons: 1)
+        }
+        if pressSent {
+            buttons = 0
+            sendMouse(at: isTap ? touchStart : touch.location(in: self))
+        }
+        resetFingerMouse()
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        touchesEnded(touches, with: event)
+        guard let touch = trackedTouch, touches.contains(touch) else { return }
+        cancelFingerMouse()
+    }
+
+    private func pressFinger(at point: CGPoint, buttons: Int) {
+        pendingPress?.cancel()
+        pendingPress = nil
+        self.buttons = buttons
+        pressSent = true
+        sendMouse(at: point)
+    }
+
+    /// Abandons the current finger: releases the button if the press already went out.
+    private func cancelFingerMouse() {
+        if pressSent {
+            buttons = 0
+            sendMouse(at: lastLocation)
+        }
+        resetFingerMouse()
+    }
+
+    private func resetFingerMouse() {
+        pendingPress?.cancel()
+        pendingPress = nil
+        pressSent = false
+        trackedTouch = nil
+    }
+
+    @objc private func rightClick(_ recognizer: UITapGestureRecognizer) {
+        let point = recognizer.location(in: self)
+        buttons = 2
+        sendMouse(at: point)
+        buttons = 0
+        sendMouse(at: point)
     }
 
     @objc private func hovered(_ recognizer: UIHoverGestureRecognizer) {

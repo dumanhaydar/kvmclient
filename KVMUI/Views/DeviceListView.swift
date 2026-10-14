@@ -5,9 +5,10 @@ struct DeviceListView: View {
     @State private var selection: KVMDevice.ID?
     @State private var editing: KVMDevice?
     @State private var isAdding = false
+    @State private var columnVisibility = NavigationSplitViewVisibility.automatic
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             List(selection: $selection) {
                 ForEach(store.devices) { device in
                     NavigationLink(value: device.id) {
@@ -46,7 +47,7 @@ struct DeviceListView: View {
             #endif
         } detail: {
             if let device = store.devices.first(where: { $0.id == selection }) {
-                SessionView(device: device)
+                SessionView(device: device, columnVisibility: $columnVisibility)
                     .id(device.id)
             } else {
                 ContentUnavailableView("Sélectionne un KVM", systemImage: "cursorarrow.rays")
