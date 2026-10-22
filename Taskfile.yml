@@ -98,11 +98,40 @@ tasks:
     cmds:
       - |
         if [ -n "${BUILD_KEYCHAIN_PASSWORD:-}" ]; then
-          keychain="${BUILD_KEYCHAIN:-$HOME/Library/Keychains/login.keychain-db}"
+          keychain="${BUILD_KEYCHAIN:-login.keychain-db}"
+          case "$keychain" in */*) ;; *) keychain="$HOME/Library/Keychains/$keychain" ;; esac
           security unlock-keychain -p "$BUILD_KEYCHAIN_PASSWORD" "$keychain"
-          security set-keychain-settings -t 7200 "$keychain"
+          security set-keychain-settings "$keychain"   # no timeout, no lock on sleep
           echo "keychain unlocked: $keychain"
         fi
+
+  keychain:setup:
+    desc: "Create the dedicated signing keychain and import a certificate: task keychain:setup -- ~/cert.p12"
+    # Export the certificate with its private key from Keychain Access (right-click › Export,
+    # .p12). Run once per certificate: "Apple Development" (archives) and, if you have it,
+    # "Developer ID Application" (DMG). The keychain then unlocks itself on every task run.
+    interactive: true
+    preconditions:
+      - sh: test -n "${BUILD_KEYCHAIN:-}" && test -n "${BUILD_KEYCHAIN_PASSWORD:-}"
+        msg: "❌ Set BUILD_KEYCHAIN and BUILD_KEYCHAIN_PASSWORD in .env first (see .env.example)."
+      - sh: test -f "{{.CLI_ARGS}}"
+        msg: "Usage: task keychain:setup -- path/to/certificate.p12"
+    cmds:
+      - |
+        keychain="$BUILD_KEYCHAIN"
+        case "$keychain" in */*) ;; *) keychain="$HOME/Library/Keychains/$keychain" ;; esac
+        [ -f "$keychain" ] || security create-keychain -p "$BUILD_KEYCHAIN_PASSWORD" "$keychain"
+        security unlock-keychain -p "$BUILD_KEYCHAIN_PASSWORD" "$keychain"
+        security set-keychain-settings "$keychain"
+        printf "Password of {{.CLI_ARGS}}: "; stty -echo; read p12; stty echo; echo
+        security import "{{.CLI_ARGS}}" -k "$keychain" -P "$p12" -T /usr/bin/codesign -T /usr/bin/security
+        # Let codesign use the key without a confirmation dialog nobody would see.
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$BUILD_KEYCHAIN_PASSWORD" "$keychain" >/dev/null
+        # Make it visible to codesign and xcodebuild, keeping the existing search list.
+        if ! security list-keychains -d user | grep -q "$keychain"; then
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+        fi
+        security find-identity -v -p codesigning "$keychain"
 
   check-signing:
     internal: true
@@ -122,14 +151,15 @@ tasks:
           echo "❌ No \"Apple Development\" certificate found (see .env.example)." >&2
           exit 1
         fi
-        keychain="${BUILD_KEYCHAIN:-$HOME/Library/Keychains/login.keychain-db}"
+        keychain="${BUILD_KEYCHAIN:-login.keychain-db}"
+        case "$keychain" in */*) ;; *) keychain="$HOME/Library/Keychains/$keychain" ;; esac
         probe=$(mktemp -t kvmclient-sign); cp /usr/bin/true "$probe"
         trap 'rm -f "$probe"' EXIT
         if ! codesign --force --sign "$identity" "$probe" 2>/dev/null; then
           if [ -t 0 ]; then
             echo "🔒 The keychain is locked in this session: $keychain"
             security unlock-keychain "$keychain"
-            security set-keychain-settings -t 7200 "$keychain"
+            security set-keychain-settings "$keychain"
           fi
           if ! codesign --force --sign "$identity" "$probe" 2>/dev/null; then
             printf '%s\n' "❌ Can't sign: the keychain holding the private key is locked in this session." \
