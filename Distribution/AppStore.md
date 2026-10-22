@@ -128,6 +128,8 @@ the title bar, scroll, tap/click.
   certificates are trusted only for the host the user entered.
 - Camera / Microphone purpose strings: required only because the bundled WebRTC library
   references those APIs. The app never requests camera or microphone access.
+- Incoming network connections (Mac): the KVM's video arrives over WebRTC, which binds local
+  UDP sockets for the stream. The app does not run a server.
 - No account, no data collection. The Mac App Store build is sandboxed and does not use the
   Accessibility API.
 ```

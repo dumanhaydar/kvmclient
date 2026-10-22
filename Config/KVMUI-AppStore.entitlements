@@ -3,10 +3,13 @@
 <plist version="1.0">
 <dict>
 	<!-- Mac App Store build: sandboxed. ⌘Tab is captured through presentation options instead of
-	     an event tap (see SystemKeyInterceptor). -->
+	     an event tap (see SystemKeyInterceptor). network.server: WebRTC binds its own UDP sockets
+	     for the video stream; without it the session connects but the picture stays black. -->
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
 	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.network.server</key>
 	<true/>
 </dict>
 </plist>
