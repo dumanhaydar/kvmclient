@@ -1,0 +1,233 @@
+# ============================================================
+#  KVM Client — build and distribution from the command line (go-task).
+#
+#  One-time setup:
+#    cp .env.example .env      # then fill it in (App Store Connect API key, keychain)
+#
+#  Everyday use:
+#    task check                # compile macOS + iOS, no signing
+#    task appstore             # iOS + Mac → App Store Connect (TestFlight)
+#    task direct               # Mac Developer ID build, notarized DMG
+#    task github:release       # publish the DMG as a GitHub release
+#    task release              # all of the above
+#
+#  Every step that publishes something (upload, GitHub release) asks first.
+#  Full list: task --list
+# ============================================================
+version: "3"
+
+dotenv: [".env"]
+
+vars:
+  PROJECT: KVMUI.xcodeproj
+  SCHEME: KVMUI
+  APP: KVM Client
+  # Build number: the commit count, so every commit gets a higher one. Override with BUILD=…
+  # (e.g. to re-upload the same commit after Apple rejected a binary).
+  BUILD:
+    sh: echo "${BUILD:-$(git rev-list --count HEAD)}"
+  VERSION:
+    sh: xcodebuild -project KVMUI.xcodeproj -showBuildSettings 2>/dev/null | awk '/ MARKETING_VERSION/ { print $3; exit }'
+  # The API key does two jobs: uploading, and letting -allowProvisioningUpdates create and fetch
+  # profiles without an Apple ID signed in to Xcode (impossible over SSH or on a build machine).
+  AUTH: >-
+    -authenticationKeyPath $HOME/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8
+    -authenticationKeyID $ASC_KEY_ID
+    -authenticationKeyIssuerID $ASC_ISSUER_ID
+  NOTARY_AUTH: >-
+    --key $HOME/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8
+    --key-id $ASC_KEY_ID --issuer $ASC_ISSUER_ID
+
+tasks:
+  default:
+    cmds: [task --list]
+    silent: true
+
+  # ---- Development --------------------------------------------
+
+  check:
+    desc: Compile macOS and iOS (Release, unsigned)
+    cmds:
+      - for: [macosx, iphonesimulator]
+        cmd: >-
+          xcodebuild -project {{.PROJECT}} -scheme {{.SCHEME}} -configuration Release -sdk {{.ITEM}}
+          -derivedDataPath build/check CODE_SIGNING_ALLOWED=NO build -quiet
+
+  screenshots:
+    desc: Retake the iPhone and iPad App Store screenshots (LANGS="en fr")
+    cmds:
+      - Distribution/take-screenshots.sh {{.LANGS | default "en fr"}}
+
+  header:
+    desc: Render the App Store product page header
+    cmds: [Distribution/render-header.sh]
+
+  version:
+    desc: "Set the marketing version: task version -- 1.1"
+    requires:
+      vars: [CLI_ARGS]
+    preconditions:
+      - sh: echo "{{.CLI_ARGS}}" | grep -Eq '^[0-9]+(\.[0-9]+){1,2}$'
+        msg: "Usage: task version -- 1.1   (got \"{{.CLI_ARGS}}\")"
+    cmds:
+      - sed -i '' -E 's/MARKETING_VERSION = [0-9.]+;/MARKETING_VERSION = {{.CLI_ARGS}};/' {{.PROJECT}}/project.pbxproj
+      - echo "version {{.VERSION}} → {{.CLI_ARGS}} (commit it, then release)"
+
+  clean:
+    desc: Delete build products
+    cmds: [rm -rf build]
+
+  # ---- Signing prerequisites ----------------------------------
+
+  check-key:
+    internal: true
+    preconditions:
+      - sh: test -n "$ASC_KEY_ID" && test -n "$ASC_ISSUER_ID"
+        msg: |
+          ❌ ASC_KEY_ID / ASC_ISSUER_ID missing from .env  (cp .env.example .env)
+             App Store Connect › Users and Access › Integrations › App Store Connect API
+      - sh: test -f "$HOME/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8"
+        msg: "❌ API key not found: ~/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8"
+
+  keychain:
+    desc: Unlock the signing keychain (BUILD_KEYCHAIN / BUILD_KEYCHAIN_PASSWORD from .env)
+    # macOS keeps keychains unlocked per session: an SSH session or a fresh login can't reach the
+    # login keychain, and codesign then fails with errSecInternalComponent. A dedicated build
+    # keychain whose password lives in .env avoids that. Skipped when not configured (a local
+    # session with the login keychain unlocked works as is).
+    cmds:
+      - |
+        if [ -n "${BUILD_KEYCHAIN_PASSWORD:-}" ]; then
+          keychain="${BUILD_KEYCHAIN:-$HOME/Library/Keychains/login.keychain-db}"
+          security unlock-keychain -p "$BUILD_KEYCHAIN_PASSWORD" "$keychain"
+          security set-keychain-settings -t 7200 "$keychain"
+          echo "keychain unlocked: $keychain"
+        fi
+
+  check-signing:
+    internal: true
+    deps: [check-key]
+    cmds:
+      - task: keychain
+      # Automatic signing archives with the development certificate; export re-signs for
+      # distribution (locally or with a cloud-managed certificate through the API key).
+      - |
+        if ! security find-identity -v -p codesigning | grep -q "Apple Development"; then
+          echo "❌ No \"Apple Development\" identity visible to this session (unlock the keychain that holds it, see .env.example)." >&2
+          exit 1
+        fi
+
+  # ---- Generic steps ------------------------------------------
+
+  _archive:
+    internal: true
+    deps: [check-signing]
+    cmds:
+      - >-
+        xcodebuild archive -project {{.PROJECT}} -scheme {{.SCHEME}} -configuration Release
+        -destination "generic/platform={{.PLATFORM}}" -archivePath build/{{.DIR}}/KVMClient.xcarchive
+        CURRENT_PROJECT_VERSION={{.BUILD}} {{.EXTRA}} -allowProvisioningUpdates {{.AUTH}} -quiet
+      - echo "✓ archived {{.DIR}} {{.VERSION}} ({{.BUILD}})"
+
+  _export:
+    internal: true
+    deps: [check-signing]
+    cmds:
+      - rm -rf build/{{.DIR}}/export
+      - >-
+        xcodebuild -exportArchive -archivePath build/{{.DIR}}/KVMClient.xcarchive
+        -exportOptionsPlist {{.OPTIONS}} -exportPath build/{{.DIR}}/export
+        -allowProvisioningUpdates {{.AUTH}}
+
+  _validate:
+    internal: true
+    deps: [check-key]
+    cmds:
+      - xcrun altool --validate-app -f "{{.ARTIFACT}}" -t {{.TYPE}} --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+
+  _upload:
+    internal: true
+    deps: [check-key]
+    prompt: "Upload {{.ARTIFACT}} ({{.VERSION}} build {{.BUILD}}) to App Store Connect?"
+    cmds:
+      - xcrun altool --upload-app -f "{{.ARTIFACT}}" -t {{.TYPE}} --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+
+  # ---- App Store: iPhone / iPad -------------------------------
+
+  ios:archive:  {desc: "iOS — archive", cmds: [{task: _archive, vars: {PLATFORM: iOS, DIR: ios}}]}
+  ios:export:   {desc: "iOS — export the IPA", cmds: [{task: _export, vars: {DIR: ios, OPTIONS: Distribution/ExportOptions-AppStore.plist}}]}
+  ios:validate: {desc: "iOS — validate with Apple, no upload", cmds: [{task: _validate, vars: {ARTIFACT: "build/ios/export/{{.APP}}.ipa", TYPE: ios}}]}
+  ios:upload:   {desc: "iOS — upload to App Store Connect", cmds: [{task: _upload, vars: {ARTIFACT: "build/ios/export/{{.APP}}.ipa", TYPE: ios}}]}
+  ios:
+    desc: "iOS — archive → export → validate → upload"
+    cmds: [{task: ios:archive}, {task: ios:export}, {task: ios:validate}, {task: ios:upload}]
+
+  # ---- App Store: Mac (sandboxed) -----------------------------
+
+  mac:archive:  {desc: "Mac App Store — archive (sandboxed)", cmds: [{task: _archive, vars: {PLATFORM: macOS, DIR: mac}}]}
+  mac:export:   {desc: "Mac App Store — export the PKG", cmds: [{task: _export, vars: {DIR: mac, OPTIONS: Distribution/ExportOptions-AppStore.plist}}]}
+  mac:validate: {desc: "Mac App Store — validate with Apple, no upload", cmds: [{task: _validate, vars: {ARTIFACT: "build/mac/export/{{.APP}}.pkg", TYPE: macos}}]}
+  mac:upload:   {desc: "Mac App Store — upload to App Store Connect", cmds: [{task: _upload, vars: {ARTIFACT: "build/mac/export/{{.APP}}.pkg", TYPE: macos}}]}
+  mac:
+    desc: "Mac App Store — archive → export → validate → upload"
+    cmds: [{task: mac:archive}, {task: mac:export}, {task: mac:validate}, {task: mac:upload}]
+
+  appstore:
+    desc: iPhone, iPad and Mac → App Store Connect
+    cmds: [{task: ios}, {task: mac}]
+
+  # ---- Direct distribution: Mac, Developer ID -----------------
+
+  direct:archive:
+    desc: "Mac Developer ID — archive (not sandboxed: full ⌘Tab/⌘Space capture)"
+    cmds: [{task: _archive, vars: {PLATFORM: macOS, DIR: direct, EXTRA: CODE_SIGN_ENTITLEMENTS=Config/KVMUI-Direct.entitlements}}]
+
+  direct:export:
+    desc: Mac Developer ID — export the signed app
+    cmds: [{task: _export, vars: {DIR: direct, OPTIONS: Distribution/ExportOptions-DeveloperID.plist}}]
+
+  direct:dmg:
+    desc: Mac Developer ID — package, notarize and staple the DMG
+    deps: [check-key]
+    vars:
+      DMG: build/direct/KVM-Client-{{.VERSION}}.dmg
+    cmds:
+      - rm -rf build/direct/dmg "{{.DMG}}" && mkdir -p build/direct/dmg
+      - cp -R "build/direct/export/{{.APP}}.app" build/direct/dmg/
+      - ln -s /Applications build/direct/dmg/Applications
+      - hdiutil create -volname "{{.APP}}" -srcfolder build/direct/dmg -fs HFS+ -format UDZO "{{.DMG}}" -quiet
+      # Signing the DMG itself needs the Developer ID certificate in the keychain; with a
+      # cloud-managed one only the app is signed, which notarization accepts.
+      - |
+        if security find-identity -v -p codesigning | grep -q "Developer ID Application"; then
+          codesign --sign "Developer ID Application" --timestamp "{{.DMG}}"
+        fi
+      - xcrun notarytool submit "{{.DMG}}" {{.NOTARY_AUTH}} --wait
+      - xcrun stapler staple "{{.DMG}}"
+      - spctl --assess --type open --context context:primary-signature -v "{{.DMG}}"
+      - echo "✓ {{.DMG}}"
+
+  direct:
+    desc: "Mac Developer ID — archive → export → notarized DMG"
+    cmds: [{task: direct:archive}, {task: direct:export}, {task: direct:dmg}]
+
+  github:release:
+    desc: Publish the notarized DMG as a GitHub release (v + marketing version)
+    vars:
+      DMG: build/direct/KVM-Client-{{.VERSION}}.dmg
+    preconditions:
+      - sh: test -f "{{.DMG}}"
+        msg: "❌ {{.DMG}} not found — run: task direct"
+      - sh: test -z "$(git status --porcelain)"
+        msg: "❌ Uncommitted changes: commit first, the release is tagged on HEAD."
+      - sh: '[ "$(git rev-parse HEAD)" = "$(git rev-parse @{u})" ]'
+        msg: "❌ HEAD isn't pushed: push first, the release points at a GitHub commit."
+    prompt: "Publish GitHub release v{{.VERSION}} with {{.DMG}} on dumanhaydar/kvmclient (public)?"
+    cmds:
+      - gh release create "v{{.VERSION}}" "{{.DMG}}" --title "KVM Client {{.VERSION}}" --generate-notes --target "$(git rev-parse HEAD)"
+
+  # ---- Everything ---------------------------------------------
+
+  release:
+    desc: App Store (iOS + Mac), then the notarized DMG on GitHub
+    cmds: [{task: check}, {task: appstore}, {task: direct}, {task: github:release}]

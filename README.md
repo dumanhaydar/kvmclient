@@ -132,7 +132,7 @@ cd kvmclient
 open KVMUI.xcodeproj
 ```
 
-Pick your team under **Signing & Capabilities**, choose *My Mac* or a device, and press <kbd>⌘</kbd><kbd>R</kbd>. Swift Package Manager fetches the only dependency, [stasel/WebRTC](https://github.com/stasel/WebRTC), on first build.
+Pick your team under **Signing & Capabilities**, choose *My Mac* or a device, and press <kbd>⌘</kbd><kbd>R</kbd>. Releases are scripted: see `task --list` and [`Distribution/AppStore.md`](Distribution/AppStore.md#releasing). Swift Package Manager fetches the only dependency, [stasel/WebRTC](https://github.com/stasel/WebRTC), on first build.
 
 > [!NOTE]
 > **Capturing <kbd>⌘</kbd><kbd>Tab</kbd> and <kbd>⌘</kbd><kbd>Space</kbd>** needs the *Accessibility* permission (System Settings › Privacy & Security › Accessibility). The app asks for it from the toolbar. Because it installs a system-wide keyboard tap while the remote screen has focus, Debug builds and the GitHub release are not sandboxed.

@@ -151,7 +151,12 @@ To retake them:
 
 ## Releasing
 
-1. Bump `MARKETING_VERSION` in the project for each new version.
-2. `Distribution/upload-app-store.sh` — archives iOS and macOS and uploads both.
+Everything goes through [`Taskfile.yml`](../Taskfile.yml) ([go-task](https://taskfile.dev)).
+One-time setup: `cp .env.example .env` and fill in the App Store Connect API key.
+
+1. `task version -- 1.1` for a new version (the build number is the commit count), commit, push.
+2. `task appstore` — archives iOS and Mac, validates with Apple, asks, uploads.
 3. In App Store Connect: pick the builds, fill in "What's New", submit for review.
-4. Mac build for GitHub: `Distribution/release-mac-direct.sh`, then attach the DMG to a release.
+4. `task direct` then `task github:release` — notarized DMG of the full Mac app on GitHub.
+
+`task release` runs all of it. Each publishing step asks for confirmation (`task --yes` skips it).
