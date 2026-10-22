@@ -107,15 +107,38 @@ tasks:
   check-signing:
     internal: true
     deps: [check-key]
+    interactive: true
     cmds:
       - task: keychain
       # Automatic signing archives with the development certificate; export re-signs for
       # distribution (locally or with a cloud-managed certificate through the API key).
+      #
+      # Seeing the identity isn't enough: in an SSH or remote session the keychain is listed but
+      # locked, and codesign only fails minutes into the archive (errSecInternalComponent). So sign
+      # a throwaway file first, and offer to unlock when there's a terminal to type into.
       - |
-        if ! security find-identity -v -p codesigning | grep -q "Apple Development"; then
-          echo "❌ No \"Apple Development\" identity visible to this session (unlock the keychain that holds it, see .env.example)." >&2
+        identity=$(security find-identity -v -p codesigning | awk '/Apple Development/ { print $2; exit }')
+        if [ -z "$identity" ]; then
+          echo "❌ No \"Apple Development\" certificate found (see .env.example)." >&2
           exit 1
         fi
+        keychain="${BUILD_KEYCHAIN:-$HOME/Library/Keychains/login.keychain-db}"
+        probe=$(mktemp -t kvmclient-sign); cp /usr/bin/true "$probe"
+        trap 'rm -f "$probe"' EXIT
+        if ! codesign --force --sign "$identity" "$probe" 2>/dev/null; then
+          if [ -t 0 ]; then
+            echo "🔒 The keychain is locked in this session: $keychain"
+            security unlock-keychain "$keychain"
+            security set-keychain-settings -t 7200 "$keychain"
+          fi
+          if ! codesign --force --sign "$identity" "$probe" 2>/dev/null; then
+            printf '%s\n' "❌ Can't sign: the keychain holding the private key is locked in this session." \
+              "   Run: security unlock-keychain $keychain" \
+              "   or set BUILD_KEYCHAIN / BUILD_KEYCHAIN_PASSWORD in .env (see .env.example)." >&2
+            exit 1
+          fi
+        fi
+        echo "✓ signing works ($(security find-identity -v -p codesigning | awk -v id="$identity" '$2 == id { $1 = $2 = ""; print; exit }' | sed 's/^ *//'))"
 
   # ---- Generic steps ------------------------------------------
 
