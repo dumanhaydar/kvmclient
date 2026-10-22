@@ -1,6 +1,24 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "NSCameraUsageDescription": {
+      "comment": "Privacy - Camera Usage Description",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KVM Client never uses the camera. This permission is never requested; the text is required because the included WebRTC video library contains camera code."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KVM Client n'utilise jamais la caméra. Cette autorisation n'est jamais demandée ; ce texte est exigé car la bibliothèque vidéo WebRTC intégrée contient du code caméra."
+          }
+        }
+      }
+    },
     "NSLocalNetworkUsageDescription": {
       "comment": "Privacy - Local Network Usage Description",
       "extractionState": "extracted_with_value",
@@ -15,6 +33,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "KVM Client recherche vos KVM sur le réseau local et s'y connecte."
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription": {
+      "comment": "Privacy - Microphone Usage Description",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KVM Client never uses the microphone. This permission is never requested; the text is required because the included WebRTC video library contains audio code."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KVM Client n'utilise jamais le micro. Cette autorisation n'est jamais demandée ; ce texte est exigé car la bibliothèque vidéo WebRTC intégrée contient du code audio."
           }
         }
       }
