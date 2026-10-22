@@ -133,7 +133,9 @@ open KVMUI.xcodeproj
 Pick your team under **Signing & Capabilities**, choose *My Mac* or a device, and press <kbd>⌘</kbd><kbd>R</kbd>. Swift Package Manager fetches the only dependency, [stasel/WebRTC](https://github.com/stasel/WebRTC), on first build.
 
 > [!NOTE]
-> **Capturing <kbd>⌘</kbd><kbd>Tab</kbd> and <kbd>⌘</kbd><kbd>Space</kbd>** needs the *Accessibility* permission (System Settings › Privacy & Security › Accessibility). The app asks for it from the toolbar. Because it installs a system-wide keyboard tap while the remote screen has focus, the macOS app is not sandboxed.
+> **Capturing <kbd>⌘</kbd><kbd>Tab</kbd> and <kbd>⌘</kbd><kbd>Space</kbd>** needs the *Accessibility* permission (System Settings › Privacy & Security › Accessibility). The app asks for it from the toolbar. Because it installs a system-wide keyboard tap while the remote screen has focus, Debug builds and the GitHub release are not sandboxed.
+>
+> The **Mac App Store** build (Release configuration) is sandboxed: it captures <kbd>⌘</kbd><kbd>Tab</kbd> by turning off app switching while the remote screen has focus, but <kbd>⌘</kbd><kbd>Space</kbd> and Mission Control stay with macOS. See [`Distribution/`](Distribution/AppStore.md) for the release scripts.
 
 ## Project layout
 

@@ -140,7 +140,7 @@ struct SessionView: View {
             }
             .help("Envoie ⌘Tab, ⌘Espace, ⌘Q… à la machine distante au lieu de macOS")
 
-            if capturesShortcuts && !accessibilityTrusted {
+            if capturesShortcuts && !accessibilityTrusted && !SystemKeyInterceptor.isSandboxed {
                 Button("Autoriser ⌘Tab", systemImage: "lock.shield") {
                     SystemKeyInterceptor.requestTrust()
                 }
