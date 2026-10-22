@@ -46,9 +46,13 @@ struct SessionView: View {
                     #endif
                 #if os(macOS)
                 if showsReleaseHint {
-                    Text(accessibilityTrusted && capturesShortcuts
-                         ? "Clavier capturé, y compris ⌘Tab et ⌘Espace · ⌃⌥⌘ pour libérer"
-                         : "⌃⌥⌘ pour libérer le clavier · clic sur l'écran pour le reprendre")
+                    Group {
+                        if accessibilityTrusted && capturesShortcuts {
+                            Text("Keyboard captured, including ⌘Tab and ⌘Space · ⌃⌥⌘ to release")
+                        } else {
+                            Text("⌃⌥⌘ releases the keyboard · click the screen to capture it again")
+                        }
+                    }
                         .font(.callout)
                         .padding(.horizontal, 14).padding(.vertical, 8)
                         .background(.regularMaterial, in: Capsule())
@@ -59,7 +63,7 @@ struct SessionView: View {
                 }
                 #endif
                 if let error = session.videoError {
-                    statusCard(icon: "rectangle.slash", title: "Pas de signal HDMI", message: error)
+                    statusCard(icon: "rectangle.slash", title: "No HDMI Signal", message: Self.videoErrorMessage(error))
                         .allowsHitTesting(false)
                 }
             case .idle, .connecting:
@@ -73,15 +77,15 @@ struct SessionView: View {
                 credentialsPrompt(error: error)
             case .failed(let message):
                 VStack(spacing: 16) {
-                    statusCard(icon: "exclamationmark.triangle", title: "Connexion impossible", message: message)
-                    Button("Réessayer") { connect() }
+                    statusCard(icon: "exclamationmark.triangle", title: "Couldn't Connect", message: message)
+                    Button("Try Again") { connect() }
                         .keyboardShortcut(.defaultAction)
                 }
             }
         }
         .navigationTitle(hidesTitle ? "" : session.device.name)
         #if os(macOS)
-        .navigationSubtitle(session.activeRoute.map { "via \($0.kind.title) · \($0.host)" } ?? "")
+        .navigationSubtitle(session.activeRoute.map { String(localized: "via \($0.kind.title) · \($0.host)") } ?? "")
         #endif
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -118,46 +122,46 @@ struct SessionView: View {
                 Label("via \(route.kind.title)", systemImage: route.kind.systemImage)
                     .labelStyle(.iconOnly)
                     .foregroundStyle(.secondary)
-                    .accessibilityLabel("Connecté via \(route.kind.title)")
+                    .accessibilityLabel("Connected via \(route.kind.title)")
             }
             Button {
                 showsSoftwareKeyboard.toggle()
             } label: {
-                Label("Clavier", systemImage: showsSoftwareKeyboard ? "keyboard.chevron.compact.down" : "keyboard")
+                Label("Keyboard", systemImage: showsSoftwareKeyboard ? "keyboard.chevron.compact.down" : "keyboard")
             }
             .disabled(session.state != .connected)
             #endif
 
             Menu {
-                Section("Raccourcis") {
+                Section("Shortcuts") {
                     ForEach(KeyCombo.all) { combo in
                         Button(combo.title) { session.send(combo) }
                     }
                 }
-                Button("Coller le presse-papiers comme frappe", systemImage: "doc.on.clipboard") {
+                Button("Type Clipboard Contents", systemImage: "doc.on.clipboard") {
                     if let text = Self.clipboardText { session.type(text) }
                 }
-                Picker("Disposition du clavier distant", selection: layoutBinding) {
+                Picker("Remote Keyboard Layout", selection: layoutBinding) {
                     ForEach(KeyboardLayout.choices, id: \.code) { choice in
                         Text(choice.name).tag(choice.code)
                     }
                 }
             } label: {
-                Label("Clavier distant", systemImage: "command.square")
+                Label("Remote Keyboard", systemImage: "command.square")
             }
             .disabled(session.state != .connected)
 
             #if os(macOS)
             Toggle(isOn: $capturesShortcuts) {
-                Label("Capturer ⌘", systemImage: "command")
+                Label("Capture ⌘", systemImage: "command")
             }
-            .help("Envoie ⌘Tab, ⌘Espace, ⌘Q… à la machine distante au lieu de macOS")
+            .help("Sends ⌘Tab, ⌘Space, ⌘Q… to the remote computer instead of macOS")
 
             if capturesShortcuts && !accessibilityTrusted && !SystemKeyInterceptor.isSandboxed && !Screenshots.isActive {
-                Button("Autoriser ⌘Tab", systemImage: "lock.shield") {
+                Button("Allow ⌘Tab", systemImage: "lock.shield") {
                     SystemKeyInterceptor.requestTrust()
                 }
-                .help("macOS doit autoriser l'app dans Réglages › Confidentialité et sécurité › Accessibilité")
+                .help("macOS must allow the app in System Settings › Privacy & Security › Accessibility")
             }
             #endif
 
@@ -165,9 +169,9 @@ struct SessionView: View {
                 if session.state == .connected { session.disconnect() } else { connect() }
             } label: {
                 if session.state == .connected {
-                    Label("Déconnecter", systemImage: "bolt.horizontal.circle.fill")
+                    Label("Disconnect", systemImage: "bolt.horizontal.circle.fill")
                 } else {
-                    Label("Connecter", systemImage: "bolt.horizontal.circle")
+                    Label("Connect", systemImage: "bolt.horizontal.circle")
                 }
             }
         }
@@ -197,9 +201,16 @@ struct SessionView: View {
     private func credentialsPrompt(error: String?) -> some View {
         VStack(spacing: 14) {
             Image(systemName: "lock").font(.largeTitle)
-            Text(session.kind.map { "Connexion à \($0.shortTitle)" } ?? "Connexion au KVM").font(.headline)
+            Group {
+                if let kind = session.kind {
+                    Text("Connect to \(kind.shortTitle)")
+                } else {
+                    Text("Connect to KVM")
+                }
+            }
+            .font(.headline)
             if session.kind?.usesUsername == true {
-                TextField("Utilisateur", text: $username)
+                TextField("User Name", text: $username)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 280)
                     .autocorrectionDisabled()
@@ -207,15 +218,15 @@ struct SessionView: View {
                     .textInputAutocapitalization(.never)
                     #endif
             }
-            SecureField("Mot de passe", text: $password)
+            SecureField("Password", text: $password)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 280)
                 .onSubmit(submitPassword)
-            Toggle("Mémoriser dans le trousseau", isOn: $rememberPassword)
+            Toggle("Remember in Keychain", isOn: $rememberPassword)
             if let error {
                 Text(error).foregroundStyle(.red).font(.callout)
             }
-            Button("Se connecter", action: submitPassword)
+            Button("Sign In", action: submitPassword)
                 .keyboardShortcut(.defaultAction)
                 .disabled(password.isEmpty)
         }
@@ -230,7 +241,17 @@ struct SessionView: View {
         password = ""
     }
 
-    private func statusCard(icon: String, title: String, message: String) -> some View {
+    /// The devices report HDMI problems as codes; the common ones get a sentence.
+    private static func videoErrorMessage(_ code: String) -> String {
+        switch code {
+        case "no_signal": String(localized: "The computer isn't sending a picture.")
+        case "no_lock": String(localized: "The signal isn't stable.")
+        case "out_of_range": String(localized: "This resolution isn't supported by the KVM.")
+        default: code
+        }
+    }
+
+    private func statusCard(icon: String, title: LocalizedStringKey, message: String) -> some View {
         VStack(spacing: 8) {
             Image(systemName: icon).font(.largeTitle)
             Text(title).font(.headline)

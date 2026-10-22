@@ -35,13 +35,13 @@ final class JanusStream {
             Task { @MainActor in self?.handle(text) }
         }
         socket.onClose = { [weak self] error in
-            Task { @MainActor in self?.failed("Janus fermé : \(error?.localizedDescription ?? "?")") }
+            Task { @MainActor in self?.failed(String(localized: "Janus closed: \(error?.localizedDescription ?? "?")")) }
         }
         self.socket = socket
         socket.open()
         send(["janus": "create"]) { [weak self] reply in
             guard let self, let id = (reply["data"] as? [String: Any])?["id"] as? Int else {
-                self?.failed("Session Janus refusée.")
+                self?.failed(String(localized: "Janus session refused."))
                 return
             }
             self.sessionID = id
@@ -103,7 +103,7 @@ final class JanusStream {
         send(["janus": "attach", "plugin": "janus.plugin.ustreamer",
               "opaque_id": "kvmclient-\(Self.transaction())"]) { [weak self] reply in
             guard let self, let id = (reply["data"] as? [String: Any])?["id"] as? Int else {
-                self?.failed("Plugin uStreamer indisponible.")
+                self?.failed(String(localized: "uStreamer plugin unavailable."))
                 return
             }
             self.handleID = id
@@ -126,7 +126,7 @@ final class JanusStream {
         if let transaction = json["transaction"] as? String, kind == "success" || kind == "error",
            let reply = transactions.removeValue(forKey: transaction) {
             if kind == "error" {
-                failed((json["error"] as? [String: Any])?["reason"] as? String ?? "Erreur Janus.")
+                failed((json["error"] as? [String: Any])?["reason"] as? String ?? String(localized: "Janus error."))
             } else {
                 reply(json)
             }
@@ -139,7 +139,7 @@ final class JanusStream {
         case "webrtcup":
             onConnected?()
         case "hangup":
-            failed("Flux H.264 interrompu.")
+            failed(String(localized: "H.264 stream interrupted."))
         default:
             break
         }
@@ -151,7 +151,7 @@ final class JanusStream {
             if code == 503, Date() < watchDeadline {
                 Task { try? await Task.sleep(for: .seconds(1)); self.watch() }
             } else {
-                failed(data["error"] as? String ?? "Erreur uStreamer \(code).")
+                failed(data["error"] as? String ?? String(localized: "uStreamer error \(code)."))
             }
             return
         }
@@ -178,7 +178,7 @@ final class JanusStream {
         let delegate = JanusPeerDelegate(stream: self)
         let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)
         guard let peer = WebRTCFactory.shared.peerConnection(with: config, constraints: constraints, delegate: delegate) else {
-            return failed("Impossible de créer la connexion WebRTC.")
+            return failed(String(localized: "Couldn't create the WebRTC connection."))
         }
         self.peer = peer
         peerDelegate = delegate
@@ -196,7 +196,7 @@ final class JanusStream {
             try await peer.setLocalDescription(answer)
             sendToPlugin(["request": "start"], jsep: ["type": "answer", "sdp": answer.sdp])
         } catch {
-            failed("Négociation H.264 impossible : \(error.localizedDescription)")
+            failed(String(localized: "H.264 negotiation failed: \(error.localizedDescription)"))
         }
     }
 
@@ -213,7 +213,7 @@ final class JanusStream {
     fileprivate func peerStateChanged(_ state: RTCPeerConnectionState) {
         switch state {
         case .connected: onConnected?()
-        case .failed: failed("Connexion H.264 échouée.")
+        case .failed: failed(String(localized: "H.264 connection failed."))
         default: break
         }
     }

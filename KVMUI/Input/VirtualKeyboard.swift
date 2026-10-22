@@ -53,7 +53,7 @@ final class ExtraKeysBar: UIInputView {
 
     private static let keys: [(title: String, usage: UInt8)] = [
         ("Esc", 0x29), ("Tab", 0x2B), ("←", 0x50), ("↑", 0x52), ("↓", 0x51), ("→", 0x4F),
-        ("Suppr", 0x4C), ("Début", 0x4A), ("Fin", 0x4D), ("PgUp", 0x4B), ("PgDn", 0x4E),
+        (String(localized: "Del"), 0x4C), (String(localized: "Home"), 0x4A), (String(localized: "End"), 0x4D), ("PgUp", 0x4B), ("PgDn", 0x4E),
     ] + functionKeys
 
     init(screen: TouchScreenView) {

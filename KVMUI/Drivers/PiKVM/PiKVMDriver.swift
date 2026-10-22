@@ -36,18 +36,18 @@ final class PiKVMDriver: KVMDriver {
             guard let user = credentials.username, let password = credentials.password, !password.isEmpty else {
                 throw KVMError.credentialsRequired(nil)
             }
-            delegate?.driver(progress: "Authentification…")
+            delegate?.driver(progress: String(localized: "Signing in…"))
             // With 2FA enabled, kvmd expects the TOTP code appended to the password.
             let login = try await http.request("/api/auth/login", method: "POST",
                                                form: ["user": user, "passwd": password, "expire": "0"])
             guard login.isSuccess else {
                 throw KVMError.credentialsRequired(login.status == 403
-                    ? "Identifiants invalides (avec la 2FA, ajoute le code à 6 chiffres au mot de passe)."
+                    ? String(localized: "Invalid credentials (with 2FA, append the 6-digit code to the password).")
                     : Self.errorMessage(login))
             }
         }
 
-        delegate?.driver(progress: "Ouverture de la session…")
+        delegate?.driver(progress: String(localized: "Opening the session…"))
         openSocket()
         // The first "streamer" event tells whether H.264 is available; don't wait forever for it.
         for _ in 0..<30 where supportsH264 == nil {
@@ -75,7 +75,7 @@ final class PiKVMDriver: KVMDriver {
 
     private static func errorMessage(_ response: HTTPClient.Response) -> String {
         let result = (response.json as? [String: Any])?["result"] as? [String: Any]
-        return result?["error_msg"] as? String ?? "Connexion refusée (HTTP \(response.status))."
+        return result?["error_msg"] as? String ?? String(localized: "Connection refused (HTTP \(response.status)).")
     }
 
     private func markConnected() {
@@ -94,7 +94,7 @@ final class PiKVMDriver: KVMDriver {
         socket.onClose = { [weak self] error in
             Task { @MainActor in
                 guard let self, self.socket === socket else { return }
-                self.delegate?.driver(didFail: KVMError.protocolError("Session PiKVM fermée : \(error?.localizedDescription ?? "?")"))
+                self.delegate?.driver(didFail: KVMError.protocolError(String(localized: "PiKVM session closed: \(error?.localizedDescription ?? "?")")))
             }
         }
         self.socket = socket
@@ -135,7 +135,7 @@ final class PiKVMDriver: KVMDriver {
     // MARK: Video
 
     private func startJanus() {
-        delegate?.driver(progress: "Démarrage du flux H.264…")
+        delegate?.driver(progress: String(localized: "Starting the H.264 stream…"))
         let janus = JanusStream(http: http,
                                 watchParams: ["orientation": 0, "audio": false, "mic": false, "camera": false],
                                 queryFeatures: true)
@@ -171,7 +171,7 @@ final class PiKVMDriver: KVMDriver {
                     frames.pushMJPEG(chunk)
                     self?.markConnected()
                 }
-                self?.delegate?.driver(didFail: KVMError.protocolError("Flux vidéo terminé."))
+                self?.delegate?.driver(didFail: KVMError.protocolError(String(localized: "Video stream ended.")))
             } catch is CancellationError {
             } catch {
                 self?.delegate?.driver(didFail: error)

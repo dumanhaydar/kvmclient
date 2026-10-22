@@ -1,0 +1,1311 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    " Check that Tailscale or ZeroTier is running on this device.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " Vérifie que Tailscale ou ZeroTier est actif sur cet appareil."
+          }
+        }
+      }
+    },
+    "%@ · %@": {
+      "shouldTranslate": false
+    },
+    "%@: %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ : %@"
+          }
+        }
+      }
+    },
+    "100.x.y.z or MagicDNS name": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "100.x.y.z ou nom MagicDNS"
+          }
+        }
+      }
+    },
+    "192.168.1.50 or kvm.local": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "192.168.1.50 ou kvm.local"
+          }
+        }
+      }
+    },
+    "Add": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter"
+          }
+        }
+      }
+    },
+    "Add Manually": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter à la main"
+          }
+        }
+      }
+    },
+    "Address": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adresse"
+          }
+        }
+      }
+    },
+    "Allow ⌘Tab": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autoriser ⌘Tab"
+          }
+        }
+      }
+    },
+    "Already added": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déjà ajouté"
+          }
+        }
+      }
+    },
+    "Another session connected to this KVM.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une autre session s'est connectée à ce KVM."
+          }
+        }
+      }
+    },
+    "Automatic Detection": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Détection automatique"
+          }
+        }
+      }
+    },
+    "CSRF token not found on the TinyPilot login page.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeton CSRF introuvable sur la page de connexion TinyPilot."
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler"
+          }
+        }
+      }
+    },
+    "Capture ⌘": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capturer ⌘"
+          }
+        }
+      }
+    },
+    "Close": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermer"
+          }
+        }
+      }
+    },
+    "Connect": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecter"
+          }
+        }
+      }
+    },
+    "Connect to %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion à %@"
+          }
+        }
+      }
+    },
+    "Connect to KVM": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion au KVM"
+          }
+        }
+      }
+    },
+    "Connected via %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecté via %@"
+          }
+        }
+      }
+    },
+    "Connecting keyboard and mouse…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion du clavier et de la souris…"
+          }
+        }
+      }
+    },
+    "Connecting to %@ via %@…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion à %@ via %@…"
+          }
+        }
+      }
+    },
+    "Connecting to the demo device…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion à l'appareil de démonstration…"
+          }
+        }
+      }
+    },
+    "Connection lost.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion perdue."
+          }
+        }
+      }
+    },
+    "Connection lost: %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion perdue : %@"
+          }
+        }
+      }
+    },
+    "Connection refused (HTTP %lld).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion refusée (HTTP %lld)."
+          }
+        }
+      }
+    },
+    "Connection refused: %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion refusée : %@"
+          }
+        }
+      }
+    },
+    "Couldn't Connect": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion impossible"
+          }
+        }
+      }
+    },
+    "Couldn't create the WebRTC connection.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de créer la connexion WebRTC."
+          }
+        }
+      }
+    },
+    "Credentials required.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identifiants requis."
+          }
+        }
+      }
+    },
+    "Ctrl + Alt + Backspace": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ctrl + Alt + Retour"
+          }
+        }
+      }
+    },
+    "Ctrl + Alt + Delete": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ctrl + Alt + Suppr"
+          }
+        }
+      }
+    },
+    "Del": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suppr"
+          }
+        }
+      }
+    },
+    "Delete": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer"
+          }
+        }
+      }
+    },
+    "Demo": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Démo"
+          }
+        }
+      }
+    },
+    "Demo device": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appareil de démonstration"
+          }
+        }
+      }
+    },
+    "Disconnect": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déconnecter"
+          }
+        }
+      }
+    },
+    "Edit": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier"
+          }
+        }
+      }
+    },
+    "Edit…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier…"
+          }
+        }
+      }
+    },
+    "End": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fin"
+          }
+        }
+      }
+    },
+    "Escape": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échap"
+          }
+        }
+      }
+    },
+    "Filled in automatically after connecting if Tailscale or ZeroTier is enabled on the KVM. The app tries the local network first, then these addresses. Tailscale or ZeroTier must also be running on this device.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplies automatiquement après une connexion si Tailscale ou ZeroTier est activé sur le KVM. L'app essaie le réseau local en premier, puis ces adresses. Tailscale ou ZeroTier doit aussi tourner sur cet appareil."
+          }
+        }
+      }
+    },
+    "Find KVMs": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher des KVM"
+          }
+        }
+      }
+    },
+    "Gathering ICE candidates…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collecte des candidats ICE…"
+          }
+        }
+      }
+    },
+    "H.264 connection failed.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion H.264 échouée."
+          }
+        }
+      }
+    },
+    "H.264 negotiation failed: %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Négociation H.264 impossible : %@"
+          }
+        }
+      }
+    },
+    "H.264 stream interrupted.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flux H.264 interrompu."
+          }
+        }
+      }
+    },
+    "HTTPS (self-signed certificate)": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTPS (certificat auto-signé)"
+          }
+        }
+      }
+    },
+    "Home": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Début"
+          }
+        }
+      }
+    },
+    "Identifying the KVM…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identification du KVM…"
+          }
+        }
+      }
+    },
+    "Invalid credentials (with 2FA, append the 6-digit code to the password).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identifiants invalides (avec la 2FA, ajoute le code à 6 chiffres au mot de passe)."
+          }
+        }
+      }
+    },
+    "Invalid credentials.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identifiants invalides."
+          }
+        }
+      }
+    },
+    "Invalid password.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mot de passe invalide."
+          }
+        }
+      }
+    },
+    "Janus closed: %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Janus fermé : %@"
+          }
+        }
+      }
+    },
+    "Janus error.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erreur Janus."
+          }
+        }
+      }
+    },
+    "Janus session refused.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session Janus refusée."
+          }
+        }
+      }
+    },
+    "JetKVM, PicoKVM, PiKVM, NanoKVM and TinyPilot are recognized. KVMs reachable only through Tailscale or ZeroTier must be added by hand.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JetKVM, PicoKVM, PiKVM, NanoKVM et TinyPilot sont reconnus. Les KVM joignables uniquement par Tailscale ou ZeroTier s'ajoutent à la main."
+          }
+        }
+      }
+    },
+    "KVM": {
+      "shouldTranslate": false
+    },
+    "Keyboard": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clavier"
+          }
+        }
+      }
+    },
+    "Keyboard captured, including ⌘Tab and ⌘Space · ⌃⌥⌘ to release": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clavier capturé, y compris ⌘Tab et ⌘Espace · ⌃⌥⌘ pour libérer"
+          }
+        }
+      }
+    },
+    "Living Room PC": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PC salon"
+          }
+        }
+      }
+    },
+    "Local network": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réseau local"
+          }
+        }
+      }
+    },
+    "Local network access is denied. Allow KVM Client in Settings › Privacy & Security › Local Network, then search again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'accès au réseau local est refusé. Autorise KVM Client dans Réglages › Confidentialité et sécurité › Réseau local, puis relance."
+          }
+        }
+      }
+    },
+    "Looking for the KVM…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche du KVM…"
+          }
+        }
+      }
+    },
+    "My KVM": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mon KVM"
+          }
+        }
+      }
+    },
+    "NAS Server": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serveur NAS"
+          }
+        }
+      }
+    },
+    "Name": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nom"
+          }
+        }
+      }
+    },
+    "NanoKVM session closed: %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session NanoKVM fermée : %@"
+          }
+        }
+      }
+    },
+    "Negotiating WebRTC (older firmware)…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Négociation WebRTC (firmware ancien)…"
+          }
+        }
+      }
+    },
+    "Negotiating WebRTC…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Négociation WebRTC…"
+          }
+        }
+      }
+    },
+    "New KVM": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouveau KVM"
+          }
+        }
+      }
+    },
+    "No HDMI Signal": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas de signal HDMI"
+          }
+        }
+      }
+    },
+    "No KVM at hand? The demo simulates a server you can control.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas de KVM sous la main ? La démo simule un serveur que tu peux piloter."
+          }
+        }
+      }
+    },
+    "No KVMs": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun KVM"
+          }
+        }
+      }
+    },
+    "No KVMs Found": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun KVM trouvé"
+          }
+        }
+      }
+    },
+    "No active local network. Join the KVM's Wi-Fi or Ethernet network.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun réseau local actif. Connecte-toi au Wi-Fi ou à l'Ethernet du KVM."
+          }
+        }
+      }
+    },
+    "No address answers: %@.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune adresse ne répond : %@."
+          }
+        }
+      }
+    },
+    "Nothing on %@. Check that the KVM is on and on the same network.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien sur %@. Vérifie que le KVM est allumé et sur le même réseau."
+          }
+        }
+      }
+    },
+    "Office Rack": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rack bureau"
+          }
+        }
+      }
+    },
+    "Opening signaling…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouverture de la signalisation…"
+          }
+        }
+      }
+    },
+    "Opening the demo…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouverture de la démo…"
+          }
+        }
+      }
+    },
+    "Opening the session…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouverture de la session…"
+          }
+        }
+      }
+    },
+    "Optional": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optionnel"
+          }
+        }
+      }
+    },
+    "Password": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mot de passe"
+          }
+        }
+      }
+    },
+    "PiKVM session closed: %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session PiKVM fermée : %@"
+          }
+        }
+      }
+    },
+    "Remember in Keychain": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mémoriser dans le trousseau"
+          }
+        }
+      }
+    },
+    "Remote Access": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accès à distance"
+          }
+        }
+      }
+    },
+    "Remote Keyboard": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clavier distant"
+          }
+        }
+      }
+    },
+    "Remote Keyboard Layout": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disposition du clavier distant"
+          }
+        }
+      }
+    },
+    "SDP answer rejected: %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réponse SDP refusée : %@"
+          }
+        }
+      }
+    },
+    "Save": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer"
+          }
+        }
+      }
+    },
+    "Search Again": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relancer"
+          }
+        }
+      }
+    },
+    "Search the Network": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher sur le réseau"
+          }
+        }
+      }
+    },
+    "Searching %@…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche sur %@…"
+          }
+        }
+      }
+    },
+    "Select a KVM": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sélectionne un KVM"
+          }
+        }
+      }
+    },
+    "Sending the offer…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoi de l'offre…"
+          }
+        }
+      }
+    },
+    "Sends ⌘Tab, ⌘Space, ⌘Q… to the remote computer instead of macOS": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoie ⌘Tab, ⌘Espace, ⌘Q… à la machine distante au lieu de macOS"
+          }
+        }
+      }
+    },
+    "Shortcuts": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raccourcis"
+          }
+        }
+      }
+    },
+    "Sign In": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se connecter"
+          }
+        }
+      }
+    },
+    "Signaling interrupted: %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signalisation interrompue : %@"
+          }
+        }
+      }
+    },
+    "Signing in…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Authentification…"
+          }
+        }
+      }
+    },
+    "Starting the H.264 stream…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Démarrage du flux H.264…"
+          }
+        }
+      }
+    },
+    "Tailscale": {
+      "shouldTranslate": false
+    },
+    "The KVM isn't set up yet. Finish its setup in its web interface.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le KVM n'est pas encore configuré. Termine la configuration via son interface web."
+          }
+        }
+      }
+    },
+    "The computer isn't sending a picture.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'ordinateur n'envoie pas d'image."
+          }
+        }
+      }
+    },
+    "The signal isn't stable.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le signal n'est pas stable."
+          }
+        }
+      }
+    },
+    "This resolution isn't supported by the KVM.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette résolution n'est pas prise en charge par le KVM."
+          }
+        }
+      }
+    },
+    "TinyPilot refused the connection: %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TinyPilot a refusé la connexion : %@"
+          }
+        }
+      }
+    },
+    "Too many attempts, try again in a minute.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trop de tentatives, réessaie dans une minute."
+          }
+        }
+      }
+    },
+    "Try Again": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réessayer"
+          }
+        }
+      }
+    },
+    "Try the Demo": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essayer la démo"
+          }
+        }
+      }
+    },
+    "Type": {
+      "shouldTranslate": false
+    },
+    "Type Clipboard Contents": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coller le presse-papiers comme frappe"
+          }
+        }
+      }
+    },
+    "Unchanged if empty": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inchangé si vide"
+          }
+        }
+      }
+    },
+    "Unexpected response from the KVM (HTTP %lld).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réponse inattendue du KVM (HTTP %lld)."
+          }
+        }
+      }
+    },
+    "Unrecognized KVM type. Choose it by hand in the device settings.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type de KVM non reconnu. Choisis-le manuellement dans la fiche de l'appareil."
+          }
+        }
+      }
+    },
+    "User Name": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utilisateur"
+          }
+        }
+      }
+    },
+    "Video stream ended.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flux vidéo terminé."
+          }
+        }
+      }
+    },
+    "WebRTC connection failed.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion WebRTC échouée."
+          }
+        }
+      }
+    },
+    "WebRTC negotiation failed: %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Négociation WebRTC impossible : %@"
+          }
+        }
+      }
+    },
+    "Windows / Super Key": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touche Windows / Super"
+          }
+        }
+      }
+    },
+    "Workshop": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atelier"
+          }
+        }
+      }
+    },
+    "ZeroTier": {
+      "shouldTranslate": false
+    },
+    "ZeroTier address": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adresse ZeroTier"
+          }
+        }
+      }
+    },
+    "closed": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "fermé"
+          }
+        }
+      }
+    },
+    "closed by the server": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "fermé par le serveur"
+          }
+        }
+      }
+    },
+    "connection refused": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "connexion refusée"
+          }
+        }
+      }
+    },
+    "disconnected": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "déconnecté"
+          }
+        }
+      }
+    },
+    "macOS must allow the app in System Settings › Privacy & Security › Accessibility": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS doit autoriser l'app dans Réglages › Confidentialité et sécurité › Accessibilité"
+          }
+        }
+      }
+    },
+    "uStreamer error %lld.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erreur uStreamer %lld."
+          }
+        }
+      }
+    },
+    "uStreamer plugin unavailable.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plugin uStreamer indisponible."
+          }
+        }
+      }
+    },
+    "via %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "via %@"
+          }
+        }
+      }
+    },
+    "via %@ · %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "via %@ · %@"
+          }
+        }
+      }
+    },
+    "⌃⌥⌘ releases the keyboard · click the screen to capture it again": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌃⌥⌘ pour libérer le clavier · clic sur l'écran pour le reprendre"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

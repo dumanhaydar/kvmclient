@@ -9,11 +9,11 @@ enum KVMError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notSetUp: "Le KVM n'est pas encore configuré. Termine la configuration via son interface web."
-        case .credentialsRequired(let message): message ?? "Identifiants requis."
-        case .badResponse(let code): "Réponse inattendue du KVM (HTTP \(code))."
+        case .notSetUp: String(localized: "The KVM isn't set up yet. Finish its setup in its web interface.")
+        case .credentialsRequired(let message): message ?? String(localized: "Credentials required.")
+        case .badResponse(let code): String(localized: "Unexpected response from the KVM (HTTP \(code)).")
         case .protocolError(let message): message
-        case .unsupportedDevice: "Type de KVM non reconnu. Choisis-le manuellement dans la fiche de l'appareil."
+        case .unsupportedDevice: String(localized: "Unrecognized KVM type. Choose it by hand in the device settings.")
         }
     }
 }

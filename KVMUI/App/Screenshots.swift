@@ -40,10 +40,10 @@ enum Screenshots {
         let store = DeviceStore(defaults: defaults)
         store.addDemo()
         let samples = [
-            KVMDevice(name: "Serveur NAS", host: "192.168.1.20", kind: .jetKVM, tailscaleHost: "nas-kvm.tail4f2a.ts.net"),
-            KVMDevice(name: "Atelier", host: "192.168.1.31", useHTTPS: true, kind: .piKVM, username: "admin"),
-            KVMDevice(name: "Rack bureau", host: "10.0.0.12", kind: .nanoKVM, zeroTierHost: "10.147.17.5"),
-            KVMDevice(name: "PC salon", host: "192.168.1.44", kind: .tinyPilot),
+            KVMDevice(name: String(localized: "NAS Server"), host: "192.168.1.20", kind: .jetKVM, tailscaleHost: "nas-kvm.tail4f2a.ts.net"),
+            KVMDevice(name: String(localized: "Workshop"), host: "192.168.1.31", useHTTPS: true, kind: .piKVM, username: "admin"),
+            KVMDevice(name: String(localized: "Office Rack"), host: "10.0.0.12", kind: .nanoKVM, zeroTierHost: "10.147.17.5"),
+            KVMDevice(name: String(localized: "Living Room PC"), host: "192.168.1.44", kind: .tinyPilot),
         ]
         for device in samples { store.save(device, password: nil) }
         return store

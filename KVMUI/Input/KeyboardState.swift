@@ -62,11 +62,11 @@ struct KeyCombo: Identifiable {
     let usages: [UInt8]
 
     static let all: [KeyCombo] = [
-        KeyCombo(id: "cad", title: "Ctrl + Alt + Suppr", usages: [HIDUsage.leftControl, HIDUsage.leftAlt, HIDUsage.delete]),
-        KeyCombo(id: "cab", title: "Ctrl + Alt + Retour", usages: [HIDUsage.leftControl, HIDUsage.leftAlt, HIDUsage.backspace]),
+        KeyCombo(id: "cad", title: String(localized: "Ctrl + Alt + Delete"), usages: [HIDUsage.leftControl, HIDUsage.leftAlt, HIDUsage.delete]),
+        KeyCombo(id: "cab", title: String(localized: "Ctrl + Alt + Backspace"), usages: [HIDUsage.leftControl, HIDUsage.leftAlt, HIDUsage.backspace]),
         KeyCombo(id: "alttab", title: "Alt + Tab", usages: [HIDUsage.leftAlt, HIDUsage.tab]),
-        KeyCombo(id: "meta", title: "Touche Windows / Super", usages: [HIDUsage.leftMeta]),
-        KeyCombo(id: "esc", title: "Échap", usages: [HIDUsage.escape]),
+        KeyCombo(id: "meta", title: String(localized: "Windows / Super Key"), usages: [HIDUsage.leftMeta]),
+        KeyCombo(id: "esc", title: String(localized: "Escape"), usages: [HIDUsage.escape]),
     ]
 }
 

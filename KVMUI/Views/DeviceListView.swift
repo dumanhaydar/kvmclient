@@ -17,10 +17,10 @@ struct DeviceListView: View {
                             VStack(alignment: .leading) {
                                 Text(device.name)
                                 HStack(spacing: 4) {
-                                    Text(device.isDemo ? "Appareil de démonstration" : device.host)
+                                    device.isDemo ? Text("Demo device") : Text(device.host)
                                     ForEach(device.routes.dropFirst(), id: \.self) { route in
                                         Image(systemName: route.kind.systemImage)
-                                            .help("\(route.kind.title) : \(route.host)")
+                                            .help("\(route.kind.title): \(route.host)")
                                     }
                                 }
                                 .font(.caption)
@@ -31,31 +31,31 @@ struct DeviceListView: View {
                         }
                     }
                     .contextMenu {
-                        Button("Modifier…") { editing = device }
-                        Button("Supprimer", role: .destructive) { store.delete(device) }
+                        Button("Edit…") { editing = device }
+                        Button("Delete", role: .destructive) { store.delete(device) }
                     }
                 }
             }
             .navigationTitle("KVM")
             .toolbar {
                 ToolbarItem {
-                    Button("Rechercher sur le réseau", systemImage: "dot.radiowaves.left.and.right") { isDiscovering = true }
+                    Button("Search the Network", systemImage: "dot.radiowaves.left.and.right") { isDiscovering = true }
                 }
                 ToolbarItem {
-                    Button("Ajouter", systemImage: "plus") { isAdding = true }
+                    Button("Add", systemImage: "plus") { isAdding = true }
                 }
             }
             .overlay {
                 if store.devices.isEmpty {
                     ContentUnavailableView {
-                        Label("Aucun KVM", systemImage: "display")
+                        Label("No KVMs", systemImage: "display")
                     } description: {
-                        Text("Pas de KVM sous la main ? La démo simule un serveur que tu peux piloter.")
+                        Text("No KVM at hand? The demo simulates a server you can control.")
                     } actions: {
-                        Button("Rechercher sur le réseau") { isDiscovering = true }
+                        Button("Search the Network") { isDiscovering = true }
                             .buttonStyle(.borderedProminent)
-                        Button("Ajouter à la main") { isAdding = true }
-                        Button("Essayer la démo") { selection = store.addDemo().id }
+                        Button("Add Manually") { isAdding = true }
+                        Button("Try the Demo") { selection = store.addDemo().id }
                     }
                 }
             }
@@ -67,7 +67,7 @@ struct DeviceListView: View {
                 SessionView(device: device, columnVisibility: $columnVisibility)
                     .id(device.id)
             } else {
-                ContentUnavailableView("Sélectionne un KVM", systemImage: "cursorarrow.rays")
+                ContentUnavailableView("Select a KVM", systemImage: "cursorarrow.rays")
             }
         }
         .task {

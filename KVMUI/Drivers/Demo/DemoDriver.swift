@@ -34,7 +34,7 @@ final class DemoDriver: KVMDriver {
     }
 
     func connect(credentials: Credentials) async throws {
-        delegate?.driver(progress: "Connexion à l'appareil de démonstration…")
+        delegate?.driver(progress: String(localized: "Connecting to the demo device…"))
         try? await Task.sleep(for: .milliseconds(500))
         delegate?.driver(video: .frames(stream))
         delegate?.driver(sourceSize: DemoDesktop.size)

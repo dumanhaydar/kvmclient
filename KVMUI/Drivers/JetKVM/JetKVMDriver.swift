@@ -43,14 +43,14 @@ final class JetKVMDriver: KVMDriver {
             guard let password = credentials.password, !password.isEmpty else {
                 throw KVMError.credentialsRequired(nil)
             }
-            delegate?.driver(progress: "Authentification…")
+            delegate?.driver(progress: String(localized: "Signing in…"))
             let login = try await http.request("/auth/login-local", method: "POST", json: ["password": password])
             guard login.isSuccess else {
                 let message = (login.json as? [String: Any])?["error"] as? String
-                throw KVMError.credentialsRequired(message ?? "Mot de passe invalide.")
+                throw KVMError.credentialsRequired(message ?? String(localized: "Invalid password."))
             }
         }
-        delegate?.driver(progress: "Ouverture de la signalisation…")
+        delegate?.driver(progress: String(localized: "Opening signaling…"))
         openSignaling()
     }
 
@@ -93,7 +93,7 @@ final class JetKVMDriver: KVMDriver {
                     Task { await self.setupPeerConnection(legacy: true) }
                     return
                 }
-                self.fail("Signalisation interrompue : \(error?.localizedDescription ?? "fermée")")
+                self.fail(String(localized: "Signaling interrupted: \(error?.localizedDescription ?? String(localized: "closed"))"))
             }
         }
         signaling = channel
@@ -119,7 +119,7 @@ final class JetKVMDriver: KVMDriver {
             guard let encoded = data as? String, let sdp = Self.decodeSDP(encoded) else { return }
             peer?.setRemoteDescription(RTCSessionDescription(type: .answer, sdp: sdp)) { [weak self] error in
                 guard let error else { return }
-                Task { @MainActor in self?.fail("Réponse SDP refusée : \(error.localizedDescription)") }
+                Task { @MainActor in self?.fail(String(localized: "SDP answer rejected: \(error.localizedDescription)")) }
             }
         case "new-ice-candidate":
             guard let info = data as? [String: Any],
@@ -139,7 +139,7 @@ final class JetKVMDriver: KVMDriver {
 
     private func setupPeerConnection(legacy: Bool) async {
         guard peer == nil else { return }
-        delegate?.driver(progress: legacy ? "Négociation WebRTC (firmware ancien)…" : "Négociation WebRTC…")
+        delegate?.driver(progress: legacy ? String(localized: "Negotiating WebRTC (older firmware)…") : String(localized: "Negotiating WebRTC…"))
 
         let config = RTCConfiguration()
         config.sdpSemantics = .unifiedPlan
@@ -149,7 +149,7 @@ final class JetKVMDriver: KVMDriver {
         let delegate = PeerDelegate(driver: self)
         let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)
         guard let peer = WebRTCFactory.shared.peerConnection(with: config, constraints: constraints, delegate: delegate) else {
-            return fail("Impossible de créer la connexion WebRTC.")
+            return fail(String(localized: "Couldn't create the WebRTC connection."))
         }
         self.peer = peer
         peerDelegate = delegate
@@ -181,7 +181,7 @@ final class JetKVMDriver: KVMDriver {
                 signaling?.send(type: "offer", data: ["sd": try Self.encode(offer)])
             }
         } catch {
-            fail("Négociation WebRTC impossible : \(error.localizedDescription)")
+            fail(String(localized: "WebRTC negotiation failed: \(error.localizedDescription)"))
         }
     }
 
@@ -210,7 +210,7 @@ final class JetKVMDriver: KVMDriver {
     }
 
     private func exchangeLegacyOffer(peer: RTCPeerConnection) async throws {
-        delegate?.driver(progress: "Collecte des candidats ICE…")
+        delegate?.driver(progress: String(localized: "Gathering ICE candidates…"))
         if peer.iceGatheringState != .complete {
             await withCheckedContinuation { continuation in
                 iceGatheringComplete = continuation
@@ -222,7 +222,7 @@ final class JetKVMDriver: KVMDriver {
             }
         }
         guard self.peer === peer, let local = peer.localDescription else { return }
-        delegate?.driver(progress: "Envoi de l'offre…")
+        delegate?.driver(progress: String(localized: "Sending the offer…"))
         let response = try await http.request("/webrtc/session", method: "POST", json: ["sd": try Self.encode(local)])
         if response.status == 401 { throw KVMError.credentialsRequired(nil) }
         guard response.isSuccess,
@@ -243,9 +243,9 @@ final class JetKVMDriver: KVMDriver {
             connected = true
             delegate?.driverDidConnect()
         case .failed:
-            fail("Connexion WebRTC échouée.")
+            fail(String(localized: "WebRTC connection failed."))
         case .disconnected, .closed:
-            if connected { fail("Connexion perdue.") }
+            if connected { fail(String(localized: "Connection lost.")) }
         default:
             break
         }
@@ -324,7 +324,7 @@ final class JetKVMDriver: KVMDriver {
         case "videoInputState":
             if let state = json["params"] as? [String: Any] { applyVideoState(state) }
         case "otherSessionConnected":
-            fail("Une autre session s'est connectée à ce KVM.")
+            fail(String(localized: "Another session connected to this KVM."))
         default:
             break
         }

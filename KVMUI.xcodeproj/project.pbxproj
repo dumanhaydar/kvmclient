@@ -98,11 +98,11 @@
 				};
 			};
 			buildConfigurationList = A10000000000000000000901 /* Build configuration list for PBXProject "KVMUI" */;
-			developmentRegion = fr;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				fr,
 				en,
+				fr,
 				Base,
 			);
 			mainGroup = A10000000000000000000601;
@@ -258,7 +258,7 @@
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "KVM Client";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "KVM Client recherche vos KVM sur le réseau local et s'y connecte.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "KVM Client finds and connects to your KVMs on the local network.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphone*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphone*]" = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = NO;
@@ -272,6 +272,7 @@
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -294,7 +295,7 @@
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "KVM Client";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "KVM Client recherche vos KVM sur le réseau local et s'y connecte.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "KVM Client finds and connects to your KVMs on the local network.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphone*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphone*]" = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = NO;
@@ -308,6 +309,7 @@
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

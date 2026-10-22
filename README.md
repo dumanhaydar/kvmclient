@@ -17,7 +17,7 @@ JetKVM · Luckfox PicoKVM · PiKVM · NanoKVM · TinyPilot — one app, no brows
 [![License: MIT](https://img.shields.io/badge/license-MIT-618CFA?style=flat-square)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](#contributing)
 
-<img src="Distribution/Screenshots/mac-2-screen.png" alt="KVM Client on macOS, showing the built-in demo device" width="820">
+<img src="Distribution/Screenshots/en/mac-2-screen.png" alt="KVM Client on macOS, showing the built-in demo device" width="820">
 
 </div>
 
@@ -166,6 +166,8 @@ Tools/
 ## Contributing
 
 Issues and pull requests are welcome! Adding a new KVM usually means one file: implement `KVMDriver` (`connect`, `disconnect`, keyboard reports, absolute pointer, wheel), add a `detect` fingerprint, and register it in `DeviceKind`. Shared building blocks — WebRTC, Janus, Socket.IO, MJPEG and H.264 decoding — are already there.
+
+The app is in **English and French**. Interface strings are written in English in the code and translated in [`KVMUI/Localizable.xcstrings`](KVMUI/Localizable.xcstrings); Xcode adds new strings to the catalog when you build, and a new language is one column away.
 
 ## Acknowledgements
 

@@ -24,7 +24,7 @@ final class SocketIOClient {
             Task { @MainActor in self?.handle(text) }
         }
         socket.onClose = { [weak self] error in
-            Task { @MainActor in self?.closed(error?.localizedDescription ?? "fermé") }
+            Task { @MainActor in self?.closed(error?.localizedDescription ?? String(localized: "closed")) }
         }
         socket.open()
     }
@@ -65,7 +65,7 @@ final class SocketIOClient {
         case "2": // server ping
             socket.send("3")
         case "1": // Engine.IO close
-            closed("fermé par le serveur")
+            closed(String(localized: "closed by the server"))
         case "4":
             handleSocketIO(body)
         default:
@@ -81,10 +81,10 @@ final class SocketIOClient {
             connected = true
             onConnect?()
         case "1":
-            closed("déconnecté")
+            closed(String(localized: "disconnected"))
         case "4":
             let message = (try? JSONSerialization.jsonObject(with: Data(rest.utf8)) as? [String: Any])?["message"] as? String
-            closed(message ?? "connexion refusée")
+            closed(message ?? String(localized: "connection refused"))
         case "3":
             let digits = rest.prefix { $0.isNumber }
             rest = rest.dropFirst(digits.count)
@@ -102,6 +102,6 @@ final class SocketIOClient {
         let pending = acks
         acks.removeAll()
         pending.values.forEach { $0(nil) }
-        onDisconnect?(wasConnected ? "Connexion perdue : \(reason)" : reason)
+        onDisconnect?(wasConnected ? String(localized: "Connection lost: \(reason)") : reason)
     }
 }

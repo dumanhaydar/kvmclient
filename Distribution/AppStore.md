@@ -118,7 +118,7 @@ Un IP-KVM est nécessaire. KVM Client n'est pas affilié aux fabricants des appa
 KVM Client is a viewer for IP-KVM hardware (small network devices that capture another
 computer's HDMI output and emulate its USB keyboard and mouse).
 
-To try it without hardware, tap "Essayer la démo" on the first screen: it adds a simulated
+To try it without hardware, tap "Try the Demo" on the first screen: it adds a simulated
 device showing a Linux server desktop. Type in its terminal (try "help"), drag its windows by
 the title bar, scroll, tap/click. A video with a real Luckfox PicoKVM is here: <VIDEO URL>.
 
@@ -132,14 +132,17 @@ the title bar, scroll, tap/click. A video with a real Luckfox PicoKVM is here: <
 
 ## Screenshots
 
-Ready to upload in [`Screenshots/`](Screenshots): iPhone 6.9" (2868 × 1320 and 1320 × 2868),
-iPad 13" (2064 × 2752), Mac (1440 × 900). All show the demo device.
+Ready to upload in [`Screenshots/en`](Screenshots/en) and [`Screenshots/fr`](Screenshots/fr):
+iPhone 6.9" (2868 × 1320 and 1320 × 2868), iPad 13" (2064 × 2752), Mac (1440 × 900).
+All show the demo device. Mac captions: "All your KVMs in one app" / "Your server, as if you were
+right there" (FR: "Tous vos KVM dans une seule app" / "Votre serveur, comme si vous étiez devant").
 
 To retake them:
 
-- iPhone and iPad: `Distribution/take-screenshots.sh` (simulators, launch arguments documented
-  in `KVMUI/App/Screenshots.swift`).
-- Mac: run a Debug build with `-screenshots -openDemo [-sidebar | -demoCommand neofetch]`, capture
+- iPhone and iPad: `Distribution/take-screenshots.sh [en fr]` (simulators, launch arguments
+  documented in `KVMUI/App/Screenshots.swift`).
+- Mac: run a Debug build with `-screenshots -openDemo [-sidebar | -demoCommand neofetch]`
+  (add `-AppleLanguages "(fr)"` for French), capture
   the window at 1360 pt wide, then
   `swift Distribution/compose-mac-screenshot.swift window.png "Caption" out.png`.
 

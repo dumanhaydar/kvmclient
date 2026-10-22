@@ -49,12 +49,12 @@ final class KVMSession {
     func connect(credentials: Credentials) async {
         disconnect()
         if device.isDemo { return await connectDemo() }
-        state = .connecting("Recherche du KVM…")
+        state = .connecting(String(localized: "Looking for the KVM…"))
         guard let http = await reachableClient() else {
             let tried = device.routes.map { "\($0.kind.title) (\($0.host))" }.joined(separator: ", ")
-            var message = "Aucune adresse ne répond : \(tried)."
+            var message = String(localized: "No address answers: \(tried).")
             if device.routes.contains(where: { $0.kind != .local }) {
-                message += " Vérifie que Tailscale ou ZeroTier est actif sur cet appareil."
+                message += String(localized: " Check that Tailscale or ZeroTier is running on this device.")
             }
             return fail(message)
         }
@@ -66,13 +66,13 @@ final class KVMSession {
             if let known = device.kind {
                 kind = known
             } else {
-                state = .connecting("Identification du KVM…")
+                state = .connecting(String(localized: "Identifying the KVM…"))
                 guard let detected = await DeviceDetector.detect(http.client) else { throw KVMError.unsupportedDevice }
                 kind = detected
                 updateDevice { $0.kind = detected }
             }
 
-            state = .connecting("Connexion à \(kind.shortTitle) via \(http.route.kind.title)…")
+            state = .connecting(String(localized: "Connecting to \(kind.shortTitle) via \(http.route.kind.title)…"))
             let driver = Self.makeDriver(kind, http: http.client)
             driver.delegate = self
             self.driver = driver
@@ -93,7 +93,7 @@ final class KVMSession {
     }
 
     private func connectDemo() async {
-        state = .connecting("Ouverture de la démo…")
+        state = .connecting(String(localized: "Opening the demo…"))
         let driver = DemoDriver(keyboardLayout: keyboardLayout)
         driver.delegate = self
         self.driver = driver

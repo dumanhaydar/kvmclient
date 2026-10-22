@@ -37,11 +37,11 @@ final class TinyPilotDriver: KVMDriver {
                   let password = credentials.password, !password.isEmpty else {
                 throw KVMError.credentialsRequired(nil)
             }
-            delegate?.driver(progress: "Authentification…")
+            delegate?.driver(progress: String(localized: "Signing in…"))
             try await login(user: user, password: password)
         }
 
-        delegate?.driver(progress: "Connexion du clavier et de la souris…")
+        delegate?.driver(progress: String(localized: "Connecting keyboard and mouse…"))
         try await openSocket()
 
         // The page only loads the WebRTC player when H.264 is selected in TinyPilot's settings.
@@ -55,13 +55,13 @@ final class TinyPilotDriver: KVMDriver {
         let page = try await http.request("/login")
         let html = String(decoding: page.data, as: UTF8.self)
         guard let token = Self.csrfToken(in: html) else {
-            throw KVMError.protocolError("Jeton CSRF introuvable sur la page de connexion TinyPilot.")
+            throw KVMError.protocolError(String(localized: "CSRF token not found on the TinyPilot login page."))
         }
         let response = try await http.request("/api/auth", method: "POST", json: ["username": user, "password": password],
                                               headers: ["X-CSRFToken": token])
         guard response.isSuccess else {
             let message = (response.json as? [String: Any])?["message"] as? String
-            throw KVMError.credentialsRequired(response.status == 429 ? "Trop de tentatives, réessaie dans une minute." : message)
+            throw KVMError.credentialsRequired(response.status == 429 ? String(localized: "Too many attempts, try again in a minute.") : message)
         }
     }
 
@@ -109,13 +109,13 @@ final class TinyPilotDriver: KVMDriver {
             }
             socket.open()
         }
-        if let result { throw KVMError.credentialsRequired("TinyPilot a refusé la connexion : \(result)") }
+        if let result { throw KVMError.credentialsRequired(String(localized: "TinyPilot refused the connection: \(result)")) }
     }
 
     // MARK: Video
 
     private func startJanus() {
-        delegate?.driver(progress: "Démarrage du flux H.264…")
+        delegate?.driver(progress: String(localized: "Starting the H.264 stream…"))
         let janus = JanusStream(http: http, watchParams: ["audio": false], queryFeatures: false)
         janus.onTrack = { [weak self] track in self?.delegate?.driver(video: .webRTC(track)) }
         janus.onConnected = { [weak self] in self?.markConnected() }
@@ -146,7 +146,7 @@ final class TinyPilotDriver: KVMDriver {
                     frames.pushMJPEG(chunk)
                     self?.markConnected()
                 }
-                self?.delegate?.driver(didFail: KVMError.protocolError("Flux vidéo terminé."))
+                self?.delegate?.driver(didFail: KVMError.protocolError(String(localized: "Video stream ended.")))
             } catch is CancellationError {
             } catch {
                 self?.delegate?.driver(didFail: error)

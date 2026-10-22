@@ -32,7 +32,7 @@ struct KVMDevice: Identifiable, Codable, Hashable {
     var isDemo: Bool { host == Self.demoHost }
 
     static func demo() -> KVMDevice {
-        KVMDevice(name: "Démo", host: demoHost, keyboardLayout: KeyboardLayout.localeDefault)
+        KVMDevice(name: String(localized: "Demo"), host: demoHost, keyboardLayout: KeyboardLayout.localeDefault)
     }
 
     func baseURL(for route: Route) -> URL {
@@ -48,7 +48,7 @@ struct Route: Hashable {
 
         var title: String {
             switch self {
-            case .local: "Réseau local"
+            case .local: String(localized: "Local network")
             case .tailscale: "Tailscale"
             case .zeroTier: "ZeroTier"
             }

@@ -39,11 +39,11 @@ final class NanoKVMDriver: KVMDriver {
                   let password = credentials.password, !password.isEmpty else {
                 throw KVMError.credentialsRequired(nil)
             }
-            delegate?.driver(progress: "Authentification…")
+            delegate?.driver(progress: String(localized: "Signing in…"))
             try await login(user: user, password: password)
         }
 
-        delegate?.driver(progress: "Connexion du clavier et de la souris…")
+        delegate?.driver(progress: String(localized: "Connecting keyboard and mouse…"))
         openHID()
         startH264()
     }
@@ -65,7 +65,7 @@ final class NanoKVMDriver: KVMDriver {
             lastMessage = json?["msg"] as? String
             if code == -4 || code == -5 { break } // locked out: don't make it worse
         }
-        throw KVMError.credentialsRequired(lastMessage.map { "Connexion refusée : \($0)" } ?? "Identifiants invalides.")
+        throw KVMError.credentialsRequired(lastMessage.map { String(localized: "Connection refused: \($0)") } ?? String(localized: "Invalid credentials."))
     }
 
     func disconnect() {
@@ -92,7 +92,7 @@ final class NanoKVMDriver: KVMDriver {
         socket.onClose = { [weak self] error in
             Task { @MainActor in
                 guard let self, self.hid === socket else { return }
-                self.delegate?.driver(didFail: KVMError.protocolError("Session NanoKVM fermée : \(error?.localizedDescription ?? "?")"))
+                self.delegate?.driver(didFail: KVMError.protocolError(String(localized: "NanoKVM session closed: \(error?.localizedDescription ?? "?")")))
             }
         }
         hid = socket
@@ -151,7 +151,7 @@ final class NanoKVMDriver: KVMDriver {
                     frames.pushMJPEG(chunk)
                     self?.markConnected()
                 }
-                self?.delegate?.driver(didFail: KVMError.protocolError("Flux vidéo terminé."))
+                self?.delegate?.driver(didFail: KVMError.protocolError(String(localized: "Video stream ended.")))
             } catch is CancellationError {
             } catch {
                 self?.delegate?.driver(didFail: error)

@@ -19,57 +19,57 @@ struct DeviceEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                TextField("Nom", text: $name, prompt: Text("Mon KVM"))
-                TextField("Adresse", text: $host, prompt: Text("192.168.1.50 ou kvm.local"))
+                TextField("Name", text: $name, prompt: Text("My KVM"))
+                TextField("Address", text: $host, prompt: Text("192.168.1.50 or kvm.local"))
                     .autocorrectionDisabled()
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
                     #endif
-                Toggle("HTTPS (certificat auto-signé)", isOn: $useHTTPS)
+                Toggle("HTTPS (self-signed certificate)", isOn: $useHTTPS)
                 Picker("Type", selection: $kind) {
-                    Text("Détection automatique").tag(DeviceKind?.none)
+                    Text("Automatic Detection").tag(DeviceKind?.none)
                     ForEach(DeviceKind.allCases) { kind in
                         Text(kind.title).tag(DeviceKind?.some(kind))
                     }
                 }
                 if kind?.usesUsername ?? true, kind != .jetKVM {
-                    TextField("Utilisateur", text: $username, prompt: Text(kind?.defaultUsername ?? "admin"))
+                    TextField("User Name", text: $username, prompt: Text(kind?.defaultUsername ?? "admin"))
                         .autocorrectionDisabled()
                         #if os(iOS)
                         .textInputAutocapitalization(.never)
                         #endif
                 }
-                SecureField("Mot de passe", text: $password,
-                            prompt: Text(device == nil ? "Optionnel" : "Inchangé si vide"))
+                SecureField("Password", text: $password,
+                            prompt: device == nil ? Text("Optional") : Text("Unchanged if empty"))
 
                 Section {
-                    TextField("Tailscale", text: $tailscaleHost, prompt: Text("100.x.y.z ou nom MagicDNS"))
+                    TextField("Tailscale", text: $tailscaleHost, prompt: Text("100.x.y.z or MagicDNS name"))
                         .autocorrectionDisabled()
                         #if os(iOS)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.URL)
                         #endif
-                    TextField("ZeroTier", text: $zeroTierHost, prompt: Text("Adresse ZeroTier"))
+                    TextField("ZeroTier", text: $zeroTierHost, prompt: Text("ZeroTier address"))
                         .autocorrectionDisabled()
                         #if os(iOS)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.URL)
                         #endif
                 } header: {
-                    Text("Accès à distance")
+                    Text("Remote Access")
                 } footer: {
-                    Text("Remplies automatiquement après une connexion si Tailscale ou ZeroTier est activé sur le KVM. L'app essaie le réseau local en premier, puis ces adresses. Tailscale ou ZeroTier doit aussi tourner sur cet appareil.")
+                    Text("Filled in automatically after connecting if Tailscale or ZeroTier is enabled on the KVM. The app tries the local network first, then these addresses. Tailscale or ZeroTier must also be running on this device.")
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle(device == nil ? "Nouveau KVM" : "Modifier")
+            .navigationTitle(device == nil ? Text("New KVM") : Text("Edit"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Annuler") { dismiss() }
+                    Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Enregistrer") {
+                    Button("Save") {
                         var saved = device ?? draft ?? KVMDevice(name: "", host: "")
                         saved.name = name.isEmpty ? (kind?.shortTitle ?? "KVM") : name
                         saved.kind = kind
