@@ -6,7 +6,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-iphone="iPhone 17 Pro Max"
+iphone="iPhone 17 Pro"   # 6.3", the size App Store Connect asks for
 ipad="iPad Pro 13-inch (M5)"
 app="build/sim/Build/Products/Debug-iphonesimulator/KVM Client.app"
 if (( $# )); then languages=("$@"); else languages=(en fr); fi

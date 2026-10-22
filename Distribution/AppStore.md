@@ -133,9 +133,12 @@ the title bar, scroll, tap/click. A video with a real Luckfox PicoKVM is here: <
 ## Screenshots
 
 Ready to upload in [`Screenshots/en`](Screenshots/en) and [`Screenshots/fr`](Screenshots/fr):
-iPhone 6.9" (2868 × 1320 and 1320 × 2868), iPad 13" (2064 × 2752), Mac (1440 × 900).
+iPhone 6.3" (2622 × 1206 and 1206 × 2622), iPad 13" (2064 × 2752), Mac (1440 × 900).
 All show the demo device. Mac captions: "All your KVMs in one app" / "Your server, as if you were
 right there" (FR: "Tous vos KVM dans une seule app" / "Votre serveur, comme si vous étiez devant").
+
+Product page header (*En-tête*): [`Header/`](Header), 5244 × 2950 and 3840 × 1646, without text so
+the same image serves every language. Regenerate with `Distribution/render-header.sh`.
 
 To retake them:
 
