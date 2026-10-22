@@ -17,6 +17,8 @@ JetKVM · Luckfox PicoKVM · PiKVM · NanoKVM · TinyPilot — one app, no brows
 [![License: MIT](https://img.shields.io/badge/license-MIT-618CFA?style=flat-square)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](#contributing)
 
+<img src="Distribution/Screenshots/mac-2-screen.png" alt="KVM Client on macOS, showing the built-in demo device" width="820">
+
 </div>
 
 ---
@@ -81,7 +83,7 @@ IP-KVMs give you the screen, keyboard and mouse of another computer over the net
 | **Sipeed NanoKVM** · NanoKVM-Pro | H.264 over WebSocket → MJPEG fallback | Binary HID reports | 🧪 Implemented, needs testers |
 | **TinyPilot** | MJPEG or Janus H.264 | Socket.IO | 🧪 Implemented, needs testers |
 
-Use **Search the network** to find devices automatically, or add one by address; the device type is **detected automatically** when you connect. Each driver was written from the device's open-source firmware and web UI. If you own one of the 🧪 devices, a quick report (even “it works!”) is hugely appreciated — [open an issue](../../issues).
+No KVM at hand? **Try the demo**: a simulated server you can type into and click around. Use **Search the network** to find devices automatically, or add one by address; the device type is **detected automatically** when you connect. Each driver was written from the device's open-source firmware and web UI. If you own one of the 🧪 devices, a quick report (even “it works!”) is hugely appreciated — [open an issue](../../issues).
 
 ## Gestures & shortcuts
 

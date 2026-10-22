@@ -17,7 +17,7 @@ struct DeviceListView: View {
                             VStack(alignment: .leading) {
                                 Text(device.name)
                                 HStack(spacing: 4) {
-                                    Text(device.host)
+                                    Text(device.isDemo ? "Appareil de démonstration" : device.host)
                                     ForEach(device.routes.dropFirst(), id: \.self) { route in
                                         Image(systemName: route.kind.systemImage)
                                             .help("\(route.kind.title) : \(route.host)")
@@ -27,7 +27,7 @@ struct DeviceListView: View {
                                 .foregroundStyle(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "display")
+                            Image(systemName: device.isDemo ? "play.display" : "display")
                         }
                     }
                     .contextMenu {
@@ -49,15 +49,18 @@ struct DeviceListView: View {
                 if store.devices.isEmpty {
                     ContentUnavailableView {
                         Label("Aucun KVM", systemImage: "display")
+                    } description: {
+                        Text("Pas de KVM sous la main ? La démo simule un serveur que tu peux piloter.")
                     } actions: {
                         Button("Rechercher sur le réseau") { isDiscovering = true }
                             .buttonStyle(.borderedProminent)
                         Button("Ajouter à la main") { isAdding = true }
+                        Button("Essayer la démo") { selection = store.addDemo().id }
                     }
                 }
             }
             #if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 220)
+            .navigationSplitViewColumnWidth(min: 260, ideal: 280)
             #endif
         } detail: {
             if let device = store.devices.first(where: { $0.id == selection }) {
@@ -66,6 +69,11 @@ struct DeviceListView: View {
             } else {
                 ContentUnavailableView("Sélectionne un KVM", systemImage: "cursorarrow.rays")
             }
+        }
+        .task {
+            Screenshots.applyOrientation()
+            if Screenshots.opensDemo { selection = store.devices.first(where: \.isDemo)?.id }
+            if Screenshots.keepsSidebar { columnVisibility = .all }
         }
         .sheet(isPresented: $isAdding) {
             DeviceEditorView(device: nil) { device, password in
@@ -77,6 +85,9 @@ struct DeviceListView: View {
             DiscoveryView { device, password in
                 store.save(device, password: password)
                 selection = device.id
+            } onDemo: {
+                isDiscovering = false
+                selection = store.addDemo().id
             }
         }
         .sheet(item: $editing) { device in

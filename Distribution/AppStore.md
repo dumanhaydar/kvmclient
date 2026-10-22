@@ -116,8 +116,11 @@ Un IP-KVM est nécessaire. KVM Client n'est pas affilié aux fabricants des appa
 
 ```
 KVM Client is a viewer for IP-KVM hardware (small network devices that capture another
-computer's HDMI output and emulate its USB keyboard and mouse). It needs such a device to show
-anything; a demo video of the app with a Luckfox PicoKVM is here: <VIDEO URL>.
+computer's HDMI output and emulate its USB keyboard and mouse).
+
+To try it without hardware, tap "Essayer la démo" on the first screen: it adds a simulated
+device showing a Linux server desktop. Type in its terminal (try "help"), drag its windows by
+the title bar, scroll, tap/click. A video with a real Luckfox PicoKVM is here: <VIDEO URL>.
 
 - Local Network: used to reach the user's KVM and, on request, to find KVMs on the LAN.
 - NSAllowsArbitraryLoads: these devices are reached by IP address or Tailscale/ZeroTier name,
@@ -129,11 +132,16 @@ anything; a demo video of the app with a Luckfox PicoKVM is here: <VIDEO URL>.
 
 ## Screenshots
 
-| Platform | Required size |
-|---|---|
-| iPhone 6.9" | 1320 × 2868 (or 2868 × 1320 landscape) |
-| iPad 13" | 2064 × 2752 (or landscape) |
-| Mac | 2880 × 1800 (16:10), up to 10 |
+Ready to upload in [`Screenshots/`](Screenshots): iPhone 6.9" (2868 × 1320 and 1320 × 2868),
+iPad 13" (2064 × 2752), Mac (1440 × 900). All show the demo device.
+
+To retake them:
+
+- iPhone and iPad: `Distribution/take-screenshots.sh` (simulators, launch arguments documented
+  in `KVMUI/App/Screenshots.swift`).
+- Mac: run a Debug build with `-screenshots -openDemo [-sidebar | -demoCommand neofetch]`, capture
+  the window at 1360 pt wide, then
+  `swift Distribution/compose-mac-screenshot.swift window.png "Caption" out.png`.
 
 ## Releasing
 

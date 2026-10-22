@@ -3,6 +3,8 @@ import SwiftUI
 /// Sweeps the local network for KVMs and offers to add the ones found.
 struct DiscoveryView: View {
     let onAdd: (KVMDevice, String?) -> Void
+    /// Offered when nothing is found, so the app can still be tried.
+    let onDemo: () -> Void
 
     @Environment(DeviceStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -40,6 +42,9 @@ struct DiscoveryView: View {
                              : "Rien sur \(scanner.networks.joined(separator: ", ")). Vérifie que le KVM est allumé et sur le même réseau.")
                     } actions: {
                         Button("Relancer") { scanner.start() }
+                        if !store.devices.contains(where: \.isDemo) {
+                            Button("Essayer la démo", action: onDemo)
+                        }
                     }
                 }
             }

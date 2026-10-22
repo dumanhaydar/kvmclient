@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct KVMUIApp: App {
-    @State private var store = DeviceStore()
+    @State private var store = Screenshots.makeStore()
 
     var body: some Scene {
         WindowGroup {

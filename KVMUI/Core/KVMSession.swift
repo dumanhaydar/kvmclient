@@ -48,6 +48,7 @@ final class KVMSession {
 
     func connect(credentials: Credentials) async {
         disconnect()
+        if device.isDemo { return await connectDemo() }
         state = .connecting("Recherche du KVM…")
         guard let http = await reachableClient() else {
             let tried = device.routes.map { "\($0.kind.title) (\($0.host))" }.joined(separator: ", ")
@@ -89,6 +90,14 @@ final class KVMSession {
         } catch {
             fail(error.localizedDescription)
         }
+    }
+
+    private func connectDemo() async {
+        state = .connecting("Ouverture de la démo…")
+        let driver = DemoDriver(keyboardLayout: keyboardLayout)
+        driver.delegate = self
+        self.driver = driver
+        try? await driver.connect(credentials: Credentials())
     }
 
     private static func makeDriver(_ kind: DeviceKind, http: HTTPClient) -> KVMDriver {

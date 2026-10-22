@@ -6,9 +6,11 @@ final class DeviceStore {
     private static let defaultsKey = "devices"
 
     private(set) var devices: [KVMDevice] = []
+    private let defaults: UserDefaults
 
-    init() {
-        if let data = UserDefaults.standard.data(forKey: Self.defaultsKey),
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        if let data = defaults.data(forKey: Self.defaultsKey),
            let decoded = try? JSONDecoder().decode([KVMDevice].self, from: data) {
             devices = decoded
         }
@@ -47,6 +49,15 @@ final class DeviceStore {
         persist()
     }
 
+    /// Adds the demo device unless it's already there; returns it.
+    @discardableResult
+    func addDemo() -> KVMDevice {
+        if let demo = devices.first(where: \.isDemo) { return demo }
+        let demo = KVMDevice.demo()
+        save(demo, password: nil)
+        return demo
+    }
+
     func delete(_ device: KVMDevice) {
         devices.removeAll { $0.id == device.id }
         Keychain.deletePassword(for: device.id)
@@ -55,7 +66,7 @@ final class DeviceStore {
 
     private func persist() {
         if let data = try? JSONEncoder().encode(devices) {
-            UserDefaults.standard.set(data, forKey: Self.defaultsKey)
+            defaults.set(data, forKey: Self.defaultsKey)
         }
     }
 }

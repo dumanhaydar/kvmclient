@@ -27,6 +27,14 @@ struct KVMDevice: Identifiable, Codable, Hashable {
             .filter { !$0.host.isEmpty }
     }
 
+    /// The built-in demo device (see `DemoDriver`): never contacted over the network.
+    static let demoHost = "demo.kvmclient.invalid"
+    var isDemo: Bool { host == Self.demoHost }
+
+    static func demo() -> KVMDevice {
+        KVMDevice(name: "Démo", host: demoHost, keyboardLayout: KeyboardLayout.localeDefault)
+    }
+
     func baseURL(for route: Route) -> URL {
         URL(string: "\(useHTTPS ? "https" : "http")://\(route.host)")!
     }

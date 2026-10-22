@@ -106,15 +106,18 @@ final class ExtraKeysBar: UIInputView {
 
     func update(sticky: UInt8) {
         for (bit, button) in modifierButtons {
-            button.configuration?.baseBackgroundColor = sticky & bit != 0 ? .tintColor : .secondarySystemFill
+            button.configuration?.baseBackgroundColor = sticky & bit != 0 ? .tintColor : Self.keyBackground
             button.configuration?.baseForegroundColor = sticky & bit != 0 ? .white : .label
         }
     }
 
+    /// Opaque, like the keys of the system keyboard: the bar floats over the black remote screen.
+    private static let keyBackground = UIColor { $0.userInterfaceStyle == .dark ? .systemGray4 : .white }
+
     private func makeButton(_ title: String, action: @escaping () -> Void) -> UIButton {
         var config = UIButton.Configuration.filled()
         config.title = title
-        config.baseBackgroundColor = .secondarySystemFill
+        config.baseBackgroundColor = Self.keyBackground
         config.baseForegroundColor = .label
         config.cornerStyle = .medium
         config.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 10, bottom: 4, trailing: 10)

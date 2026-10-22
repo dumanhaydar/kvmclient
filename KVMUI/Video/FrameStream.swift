@@ -50,6 +50,11 @@ final class FrameStream: @unchecked Sendable {
         }
     }
 
+    /// An already decoded frame (demo device).
+    func pushImage(_ image: CGImage) {
+        queue.async { [self] in renderer?.render(image: image) }
+    }
+
     /// A complete JPEG (e.g. one WebSocket message).
     func pushJPEG(_ frame: Data) {
         pushMJPEG(frame)

@@ -7,8 +7,20 @@ struct SessionView: View {
     @State private var password = ""
     @State private var rememberPassword = true
     @State private var capturesShortcuts = true
-    @State private var showsSoftwareKeyboard = false
+    @State private var showsSoftwareKeyboard = Screenshots.showsKeyboard
     @State private var showsReleaseHint = false
+    #if os(iOS)
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    #endif
+
+    /// iPhone in landscape: the remote screen fills the height and the title would sit on top of it.
+    private var hidesTitle: Bool {
+        #if os(iOS)
+        verticalSizeClass == .compact && session.state == .connected
+        #else
+        false
+        #endif
+    }
     #if os(macOS)
     @State private var accessibilityTrusted = SystemKeyInterceptor.isTrusted
     #endif
@@ -67,12 +79,13 @@ struct SessionView: View {
                 }
             }
         }
-        .navigationTitle(session.device.name)
+        .navigationTitle(hidesTitle ? "" : session.device.name)
         #if os(macOS)
         .navigationSubtitle(session.activeRoute.map { "via \($0.kind.title) · \($0.host)" } ?? "")
         #endif
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar) // over the black screen, not the list
         #endif
         .toolbar { toolbar }
         .task {
@@ -83,7 +96,7 @@ struct SessionView: View {
         .onDisappear { session.disconnect() }
         .onChange(of: session.state) { _, state in
             guard state == .connected else { return }
-            withAnimation { columnVisibility = .detailOnly }
+            if !Screenshots.keepsSidebar { withAnimation { columnVisibility = .detailOnly } }
             showsReleaseHint = true
             Task {
                 try? await Task.sleep(for: .seconds(5))
@@ -140,7 +153,7 @@ struct SessionView: View {
             }
             .help("Envoie ⌘Tab, ⌘Espace, ⌘Q… à la machine distante au lieu de macOS")
 
-            if capturesShortcuts && !accessibilityTrusted && !SystemKeyInterceptor.isSandboxed {
+            if capturesShortcuts && !accessibilityTrusted && !SystemKeyInterceptor.isSandboxed && !Screenshots.isActive {
                 Button("Autoriser ⌘Tab", systemImage: "lock.shield") {
                     SystemKeyInterceptor.requestTrust()
                 }

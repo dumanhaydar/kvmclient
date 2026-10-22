@@ -55,6 +55,14 @@ struct KeyboardLayout: Decodable {
         all.filter { $0.value.alias == nil }.map { ($0.key, $0.value.name) }.sorted { $0.name < $1.name }
     }
 
+    /// The layout matching the user's language and region (fr-BE, de-CH…), else en-US.
+    static var localeDefault: String {
+        let language = Locale.current.language.languageCode?.identifier ?? "en"
+        let code = "\(language)-\(Locale.current.region?.identifier ?? "")"
+        if let layout = all[code] { return layout.alias ?? code }
+        return all.keys.sorted().first { $0.hasPrefix(language + "-") && all[$0]?.alias == nil } ?? "en-US"
+    }
+
     /// Accepts the device's codes ("en_US", "fr-BE") and falls back to US English.
     static func named(_ code: String?) -> KeyboardLayout? {
         let normalized = (code ?? "").replacingOccurrences(of: "_", with: "-")
