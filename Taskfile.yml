@@ -108,8 +108,9 @@ tasks:
   keychain:setup:
     desc: "Create the dedicated signing keychain and import a certificate: task keychain:setup -- ~/cert.p12"
     # Export the certificate with its private key from Keychain Access (right-click › Export,
-    # .p12). Run once per certificate: "Apple Development" (archives) and, if you have it,
-    # "Developer ID Application" (DMG). The keychain then unlocks itself on every task run.
+    # .p12). Run once per certificate a release uses: "Apple Distribution" (export/upload),
+    # "Apple Development" (automatic signing archives with it) and "Developer ID Application"
+    # (DMG). The keychain then unlocks itself on every task run.
     interactive: true
     preconditions:
       - sh: test -n "${BUILD_KEYCHAIN:-}" && test -n "${BUILD_KEYCHAIN_PASSWORD:-}"
