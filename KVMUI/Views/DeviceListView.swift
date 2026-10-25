@@ -52,10 +52,13 @@ struct DeviceListView: View {
                     } description: {
                         Text("No KVM at hand? The demo simulates a server you can control.")
                     } actions: {
-                        Button("Search the Network") { isDiscovering = true }
-                            .buttonStyle(.borderedProminent)
-                        Button("Add Manually") { isAdding = true }
-                        Button("Try the Demo") { selection = store.addDemo().id }
+                        // Stacked: macOS lays actions out in a row, wider than the sidebar.
+                        VStack {
+                            Button("Search the Network") { isDiscovering = true }
+                                .buttonStyle(.borderedProminent)
+                            Button("Add Manually") { isAdding = true }
+                            Button("Try the Demo") { selection = store.addDemo().id }
+                        }
                     }
                 }
             }

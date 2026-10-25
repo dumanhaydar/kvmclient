@@ -6,6 +6,7 @@ import UIKit
 /// Launch arguments used to stage the App Store screenshots (Debug builds only):
 ///
 ///     -screenshots            sample devices in a throwaway store (the real one is untouched)
+///     -empty                  start with no devices (empty state)
 ///     -openDemo               open the demo device right away
 ///     -orientation landscape  iOS: rotate to landscape (or portrait)
 ///     -keyboard               iOS: show the virtual keyboard once connected
@@ -38,6 +39,7 @@ enum Screenshots {
         guard isActive, let defaults = UserDefaults(suiteName: "com.aroneus.kvmclient.screenshots") else { return DeviceStore() }
         defaults.removePersistentDomain(forName: "com.aroneus.kvmclient.screenshots")
         let store = DeviceStore(defaults: defaults)
+        if flag("-empty") { return store }
         store.addDemo()
         let samples = [
             KVMDevice(name: String(localized: "NAS Server"), host: "192.168.1.20", kind: .jetKVM, tailscaleHost: "nas-kvm.tail4f2a.ts.net"),
