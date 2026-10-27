@@ -182,6 +182,10 @@ KVM Client stands on the shoulders of the open-source KVM community:
 
 *Not affiliated with any of the projects or companies above. All trademarks belong to their owners.*
 
+## Author
+
+Made by Haydar Duman: [duman.io](https://duman.io).
+
 ## License
 
 KVM Client is released under the [MIT License](LICENSE). Keyboard layout tables are generated from
