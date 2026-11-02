@@ -82,6 +82,8 @@ final class HTTPClient: NSObject, URLSessionDataDelegate, @unchecked Sendable {
                  headers: [String: String] = [:], timeout: TimeInterval? = nil) async throws -> Response {
         var request = URLRequest(url: url(path, query: query))
         request.httpMethod = method
+        // Like a browser: newer NanoKVM firmware rejects POSTs without it ("csrf validation failed").
+        if method != "GET" { request.setValue(origin, forHTTPHeaderField: "Origin") }
         if let timeout { request.timeoutInterval = timeout }
         for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
         if let body {
@@ -108,8 +110,17 @@ final class HTTPClient: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     }
 
     func webSocket(_ path: String, query: [String: String] = [:], protocols: [String] = []) -> URLSessionWebSocketTask {
-        let url = webSocketURL(path, query: query)
-        return protocols.isEmpty ? session.webSocketTask(with: url) : session.webSocketTask(with: url, protocols: protocols)
+        var request = URLRequest(url: webSocketURL(path, query: query))
+        request.setValue(origin, forHTTPHeaderField: "Origin")
+        if !protocols.isEmpty { request.setValue(protocols.joined(separator: ", "), forHTTPHeaderField: "Sec-WebSocket-Protocol") }
+        return session.webSocketTask(with: request)
+    }
+
+    /// `scheme://host[:port]`, as browsers send it.
+    private var origin: String {
+        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
+        components.path = ""
+        return components.string!
     }
 
     /// Body of a never-ending response (MJPEG, raw H.264), chunk by chunk.

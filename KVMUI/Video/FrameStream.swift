@@ -5,7 +5,7 @@ import ImageIO
 
 /// Receives decoded-ready video from a driver. Implemented by the screen's layer-backed video view.
 protocol FrameRenderer: AnyObject {
-    /// H.264 access unit, ready for AVSampleBufferDisplayLayer. Called on the stream's queue.
+    /// H.264/H.265 access unit, ready for AVSampleBufferDisplayLayer. Called on the stream's queue.
     func render(sample: CMSampleBuffer)
     /// Decoded JPEG. Called on the stream's queue.
     func render(image: CGImage)
@@ -18,6 +18,7 @@ final class FrameStream: @unchecked Sendable {
     private let lock = NSLock()
     private weak var _renderer: FrameRenderer?
     private lazy var h264 = H264AnnexBParser()
+    private lazy var h265 = H264AnnexBParser(hevc: true)
     private var jpeg = JPEGScanner()
     private var decodingJPEG = false
 
@@ -31,6 +32,13 @@ final class FrameStream: @unchecked Sendable {
     func pushH264(_ data: Data, completeFrame: Bool = false) {
         queue.async { [self] in
             for sample in h264.append(data, endOfAccessUnit: completeFrame) { renderer?.render(sample: sample) }
+        }
+    }
+
+    /// Same as `pushH264`, for H.265.
+    func pushH265(_ data: Data, completeFrame: Bool = false) {
+        queue.async { [self] in
+            for sample in h265.append(data, endOfAccessUnit: completeFrame) { renderer?.render(sample: sample) }
         }
     }
 

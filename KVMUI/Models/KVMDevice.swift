@@ -13,6 +13,8 @@ struct KVMDevice: Identifiable, Codable, Hashable {
     var username: String?
     /// Remote keyboard layout used for typing text, when the device doesn't store it itself.
     var keyboardLayout: String?
+    /// Scroll the remote the other way (nil = natural for this Mac/iPad).
+    var reverseWheel: Bool?
     /// Address on the tailnet (100.x.y.z or MagicDNS name). Filled in automatically from the device.
     var tailscaleHost: String?
     /// Address on the ZeroTier network. Filled in automatically from the device.

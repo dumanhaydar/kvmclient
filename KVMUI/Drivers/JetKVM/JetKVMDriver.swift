@@ -163,7 +163,7 @@ final class JetKVMDriver: KVMDriver {
         let codecs = WebRTCFactory.shared.rtpReceiverCapabilities(forKind: kRTCMediaStreamTrackKindVideo).codecs
             .filter { !["H265", "HEVC"].contains($0.name.uppercased()) }
         _ = try? video?.setCodecPreferences(codecs, error: ())
-        if let track = video?.receiver.track as? RTCVideoTrack { self.delegate?.driver(video: .webRTC(track)) }
+        if let track = video?.receiver.track as? RTCVideoTrack { self.delegate?.driver(video: .webRTC(track), mode: "WebRTC") }
 
         let rpcDelegate = RPCChannelDelegate(driver: self)
         self.rpcDelegate = rpcDelegate
@@ -259,7 +259,7 @@ final class JetKVMDriver: KVMDriver {
     }
 
     fileprivate func receivedVideoTrack(_ track: RTCVideoTrack) {
-        delegate?.driver(video: .webRTC(track))
+        delegate?.driver(video: .webRTC(track), mode: "WebRTC")
     }
 
     // MARK: JSON-RPC

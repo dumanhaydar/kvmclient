@@ -15,6 +15,7 @@ struct DeviceEditorView: View {
     @State private var username = ""
     @State private var tailscaleHost = ""
     @State private var zeroTierHost = ""
+    @State private var reverseWheel = false
 
     var body: some View {
         NavigationStack {
@@ -42,6 +43,7 @@ struct DeviceEditorView: View {
                 }
                 SecureField("Password", text: $password,
                             prompt: device == nil ? Text("Optional") : Text("Unchanged if empty"))
+                Toggle("Reverse mouse wheel", isOn: $reverseWheel)
 
                 Section {
                     TextField("Tailscale", text: $tailscaleHost, prompt: Text("100.x.y.z or MagicDNS name"))
@@ -78,6 +80,7 @@ struct DeviceEditorView: View {
                         saved.useHTTPS = useHTTPS
                         saved.tailscaleHost = Self.optional(tailscaleHost)
                         saved.zeroTierHost = Self.optional(zeroTierHost)
+                        saved.reverseWheel = reverseWheel ? true : nil
                         onSave(saved, password.isEmpty ? nil : password)
                         dismiss()
                     }
@@ -97,6 +100,7 @@ struct DeviceEditorView: View {
             username = device?.username ?? ""
             tailscaleHost = device?.tailscaleHost ?? ""
             zeroTierHost = device?.zeroTierHost ?? ""
+            reverseWheel = device?.reverseWheel ?? false
         }
     }
 
