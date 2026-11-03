@@ -3,7 +3,7 @@ import CryptoKit
 import Foundation
 
 /// Sipeed NanoKVM (and NanoKVM-Pro): JSON login → `nano-kvm-token` cookie, binary HID reports
-/// over `/api/ws`, H.264 access units over `/api/stream/h264/direct` (MJPEG as a fallback).
+/// over `/api/ws`, H.265 then H.264 access units over `/api/stream/h26x/direct`, MJPEG as a last resort.
 @MainActor
 final class NanoKVMDriver: KVMDriver {
     weak var delegate: KVMDriverDelegate?
@@ -16,6 +16,9 @@ final class NanoKVMDriver: KVMDriver {
     private var pointer: (x: Int, y: Int) = (16384, 16384)
     private var buttons = 0
     private var connected = false
+    /// Newer firmware ignores the legacy mouse report and wants the input-router envelope.
+    private var inputRouter = false
+    private var sequence: UInt32 = 0
 
     init(http: HTTPClient) {
         self.http = http
@@ -45,13 +48,15 @@ final class NanoKVMDriver: KVMDriver {
 
         delegate?.driver(progress: String(localized: "Connecting keyboard and mouse…"))
         openHID()
-        startH264()
+        inputRouter = (try? await http.request("/api/hid/pointer-mode"))?.isSuccess == true
+        await startDirect(hevc: true)
     }
 
-    /// NanoKVM encrypts the password CryptoJS-style; NanoKVM-Pro takes it in clear. Try both.
+    /// Older NanoKVM firmware encrypts the password CryptoJS-style; Pro and newer firmware take it
+    /// in clear. Try clear first: newer firmware rate-limits failed logins.
     private func login(user: String, password: String) async throws {
         var lastMessage: String?
-        for candidate in [Self.cryptoJSEncrypt(password), password].compactMap({ $0 }) {
+        for candidate in [password, Self.cryptoJSEncrypt(password)].compactMap({ $0 }) {
             let response = try await http.request("/api/auth/login", method: "POST", json: ["username": user, "password": candidate])
             let json = response.json as? [String: Any]
             let code = json?["code"] as? Int ?? -1
@@ -107,42 +112,49 @@ final class NanoKVMDriver: KVMDriver {
 
     // MARK: Video
 
-    private func startH264() {
-        let frames = FrameStream()
-        delegate?.driver(video: .frames(frames))
-        // Ask for the H.264 encoder (the web UI does this when switching modes); harmless if refused.
-        Task { _ = try? await http.request("/api/vm/screen", method: "POST", json: ["type": "type", "value": 1]) }
+    /// H.265, falling back to H.264 and then MJPEG when a stream closes or shows nothing for 6 s.
+    private func startDirect(hevc: Bool) async {
+        let codec = hevc ? "h265" : "h264"
+        // Newer firmware only streams in the selected mode (and dropped /api/vm/screen and MJPEG); 404 on older.
+        _ = try? await http.request("/api/stream/mode", method: "POST", json: ["mode": "\(codec)-direct"])
+        if !hevc {
+            // Older firmware: ask for the H.264 encoder (the web UI does this when switching modes).
+            _ = try? await http.request("/api/vm/screen", method: "POST", json: ["type": "type", "value": 1])
+        }
 
-        let socket = WebSocketConnection(task: http.webSocket("/api/stream/h264/direct"))
+        let frames = FrameStream()
+        delegate?.driver(video: .frames(frames), mode: hevc ? "H.265" : "H.264")
+        let socket = WebSocketConnection(task: http.webSocket("/api/stream/\(codec)/direct"))
         socket.onData = { [weak self] message in
             // [isKey u8][timestamp u64 LE][Annex B access unit]
             guard message.count > 9 else { return }
-            frames.pushH264(message.subdata(in: (message.startIndex + 9)..<message.endIndex), completeFrame: true)
+            let accessUnit = message.subdata(in: (message.startIndex + 9)..<message.endIndex)
+            if hevc { frames.pushH265(accessUnit, completeFrame: true) } else { frames.pushH264(accessUnit, completeFrame: true) }
             Task { @MainActor in self?.markConnected() }
         }
-        socket.onClose = { [weak self] error in
-            Task { @MainActor in
-                guard let self, self.videoSocket === socket else { return }
-                self.videoSocket = nil
-                print("[nanokvm] H.264 stream closed (\(error?.localizedDescription ?? "?")), falling back to MJPEG")
-                self.startMJPEG()
-            }
+        let fallBack = { [weak self] (reason: String) in
+            guard let self, self.videoSocket === socket else { return }
+            self.videoSocket = nil
+            socket.close()
+            print("[nanokvm] \(codec) stream \(reason), falling back")
+            if hevc { Task { await self.startDirect(hevc: false) } } else { self.startMJPEG() }
+        }
+        socket.onClose = { error in
+            Task { @MainActor in fallBack("closed (\(error?.localizedDescription ?? "?"))") }
         }
         videoSocket = socket
         socket.open()
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(6))
-            guard let self, !self.connected, self.videoSocket === socket else { return }
-            self.videoSocket = nil
-            socket.close()
-            self.startMJPEG()
+            guard let self, !self.connected else { return }
+            fallBack("showed nothing")
         }
     }
 
     private func startMJPEG() {
         guard mjpeg == nil else { return }
         let frames = FrameStream()
-        delegate?.driver(video: .frames(frames))
+        delegate?.driver(video: .frames(frames), mode: "MJPEG")
         Task { _ = try? await http.request("/api/vm/screen", method: "POST", json: ["type": "type", "value": 0]) }
         let stream = http.stream("/api/stream/mjpeg")
         mjpeg = Task { [weak self] in
@@ -179,7 +191,17 @@ final class NanoKVMDriver: KVMDriver {
     }
 
     /// `[0x02, buttons, x LE16, y LE16, wheel]`; the web UI's range is 1...32768.
+    /// Input router: `[0x03, version 1, route 2 (browser pointer), type 3 (absolute), 0, seq LE32, ms LE32]`
+    /// then `[buttons, x LE16, y LE16, wheel LE16]` with x/y in 0...65535.
     private func sendMouse(wheel: Int8) {
+        if inputRouter {
+            sequence &+= 1
+            func le<T: FixedWidthInteger>(_ value: T) -> [UInt8] { withUnsafeBytes(of: value.littleEndian, Array.init) }
+            let scale = { (v: Int) in UInt16(min(max(v, 0), 32767) * 65535 / 32767) }
+            hid?.send(Data([0x03, 1, 2, 3, 0] + le(sequence) + le(UInt32(truncatingIfNeeded: Int(ProcessInfo.processInfo.systemUptime * 1000)))
+                           + [UInt8(buttons & 0x1F)] + le(scale(pointer.x)) + le(scale(pointer.y)) + le(Int16(wheel))))
+            return
+        }
         let x = UInt16(min(max(pointer.x + 1, 1), 32768)), y = UInt16(min(max(pointer.y + 1, 1), 32768))
         hid?.send(Data([0x02, UInt8(buttons & 0x1F),
                         UInt8(x & 0xFF), UInt8(x >> 8), UInt8(y & 0xFF), UInt8(y >> 8),

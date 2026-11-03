@@ -1,14 +1,29 @@
 import CoreMedia
 import Foundation
 
-/// Turns an H.264 Annex B byte stream (start-code separated NAL units, as sent by KVMs over
-/// HTTP or WebSocket) into CMSampleBuffers, one per access unit, flagged for immediate display.
+/// Turns an H.264 (or, with `hevc`, H.265) Annex B byte stream (start-code separated NAL units,
+/// as sent by KVMs over HTTP or WebSocket) into CMSampleBuffers, one per access unit, flagged for
+/// immediate display.
 final class H264AnnexBParser {
+    private let hevc: Bool
     private var buffer = Data()
-    private var sps: Data?
-    private var pps: Data?
+    /// SPS and PPS (plus VPS for H.265), by NAL type.
+    private var parameterSets: [UInt8: Data] = [:]
     private var format: CMVideoFormatDescription?
     private var accessUnit: [Data] = []
+
+    init(hevc: Bool = false) {
+        self.hevc = hevc
+    }
+
+    // NAL unit types: H.264 has a 1-byte header (type in the low 5 bits), H.265 a 2-byte one
+    // (type in bits 1...6 of the first byte).
+    private var parameterSetTypes: [UInt8] { hevc ? [32, 33, 34] : [7, 8] }
+    private var audType: UInt8 { hevc ? 35 : 9 }
+    private var seiType: UInt8 { hevc ? 39 : 6 }
+    private func type(of nal: Data) -> UInt8? { nal.first.map { hevc ? ($0 >> 1) & 0x3F : $0 & 0x1F } }
+    private func isSlice(_ type: UInt8) -> Bool { hevc ? type <= 21 : type == 1 || type == 5 }
+    private func isSliceNAL(_ nal: Data) -> Bool { type(of: nal).map(isSlice) ?? false }
 
     /// `endOfAccessUnit`: the data ends exactly on a frame boundary (e.g. one WebSocket message
     /// per frame), so the frame can be shown now instead of when the next one starts.
@@ -30,7 +45,7 @@ final class H264AnnexBParser {
         }
         if endOfAccessUnit {
             buffer.removeAll(keepingCapacity: true)
-            if accessUnit.contains(where: Self.isSliceNAL), let sample = makeSample(accessUnit) { samples.append(sample) }
+            if accessUnit.contains(where: isSliceNAL), let sample = makeSample(accessUnit) { samples.append(sample) }
             accessUnit.removeAll()
         } else if let last = starts.last {
             buffer.removeSubrange(buffer.startIndex..<last.offset)
@@ -67,50 +82,49 @@ final class H264AnnexBParser {
 
     /// Returns a sample when `nal` starts a new access unit and a previous one was pending.
     private func consume(_ nal: Data) -> CMSampleBuffer? {
-        guard let header = nal.first else { return nil }
-        let type = header & 0x1F
+        guard let type = type(of: nal) else { return nil }
         var finished: CMSampleBuffer?
 
-        // AUD, SPS, PPS, SEI or the first slice of a picture (first_mb_in_slice == 0) begin a new AU.
-        let isSlice = type == 1 || type == 5
-        let firstSlice = isSlice && nal.count > 1 && nal[nal.startIndex + 1] & 0x80 != 0
-        if (type == 9 || type == 7 || type == 8 || type == 6 || firstSlice), accessUnit.contains(where: Self.isSliceNAL) {
+        // AUD, parameter sets, SEI or the first slice of a picture begin a new AU. The first slice
+        // has the top bit after the header set (first_mb_in_slice == 0 / first_slice_segment_in_pic_flag).
+        let headerLength = hevc ? 2 : 1
+        let firstSlice = isSlice(type) && nal.count > headerLength && nal[nal.startIndex + headerLength] & 0x80 != 0
+        if type == audType || type == seiType || parameterSetTypes.contains(type) || firstSlice,
+           accessUnit.contains(where: isSliceNAL) {
             finished = makeSample(accessUnit)
             accessUnit.removeAll()
         }
 
-        switch type {
-        case 7:
-            if sps != nal { sps = nal; format = nil }
-        case 8:
-            if pps != nal { pps = nal; format = nil }
-        case 9:
-            break // AUD carries nothing we need
-        default:
+        if parameterSetTypes.contains(type) {
+            if parameterSets[type] != nal { parameterSets[type] = nal; format = nil }
+        } else if type != audType { // AUD carries nothing we need
             accessUnit.append(nal)
         }
         return finished
     }
 
-    private static func isSliceNAL(_ nal: Data) -> Bool {
-        guard let header = nal.first else { return false }
-        let type = header & 0x1F
-        return type == 1 || type == 5
-    }
-
     private func makeFormat() -> CMVideoFormatDescription? {
         if let format { return format }
-        guard let sps, let pps else { return nil }
+        let sets = parameterSetTypes.compactMap { parameterSets[$0] }
+        guard sets.count == parameterSetTypes.count, !sets.contains(where: \.isEmpty) else { return nil }
+        let pointers = sets.map { set -> UnsafePointer<UInt8> in
+            let copy = UnsafeMutablePointer<UInt8>.allocate(capacity: set.count)
+            set.copyBytes(to: copy, count: set.count)
+            return UnsafePointer(copy)
+        }
+        defer { pointers.forEach { $0.deallocate() } }
+        let sizes = sets.map(\.count)
         var description: CMVideoFormatDescription?
-        sps.withUnsafeBytes { spsRaw in
-            pps.withUnsafeBytes { ppsRaw in
-                let pointers = [spsRaw.bindMemory(to: UInt8.self).baseAddress!, ppsRaw.bindMemory(to: UInt8.self).baseAddress!]
-                let sizes = [sps.count, pps.count]
-                CMVideoFormatDescriptionCreateFromH264ParameterSets(
-                    allocator: kCFAllocatorDefault, parameterSetCount: 2,
-                    parameterSetPointers: pointers, parameterSetSizes: sizes,
-                    nalUnitHeaderLength: 4, formatDescriptionOut: &description)
-            }
+        if hevc {
+            CMVideoFormatDescriptionCreateFromHEVCParameterSets(
+                allocator: kCFAllocatorDefault, parameterSetCount: sets.count,
+                parameterSetPointers: pointers, parameterSetSizes: sizes,
+                nalUnitHeaderLength: 4, extensions: nil, formatDescriptionOut: &description)
+        } else {
+            CMVideoFormatDescriptionCreateFromH264ParameterSets(
+                allocator: kCFAllocatorDefault, parameterSetCount: sets.count,
+                parameterSetPointers: pointers, parameterSetSizes: sizes,
+                nalUnitHeaderLength: 4, formatDescriptionOut: &description)
         }
         format = description
         return description

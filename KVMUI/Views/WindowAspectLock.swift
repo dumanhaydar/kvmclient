@@ -12,6 +12,8 @@ final class WindowAspectLock: NSObject, NSWindowDelegate {
     private weak var view: NSView?
     private weak var original: NSWindowDelegate?
     private var pendingFit = false
+    /// The window is laid out by someone else (edge-to-edge): leave its size alone.
+    var suspended = false
 
     /// Remote display size in pixels; nil until the first decoded frame.
     var videoSize: CGSize? {
@@ -65,7 +67,7 @@ final class WindowAspectLock: NSObject, NSWindowDelegate {
     }
 
     private func canAdjust(_ window: NSWindow) -> Bool {
-        !window.styleMask.contains(.fullScreen) && !window.inLiveResize && window.isVisible
+        !suspended && !window.styleMask.contains(.fullScreen) && !window.inLiveResize && window.isVisible
     }
 
     // MARK: Sizing
@@ -111,6 +113,14 @@ final class WindowAspectLock: NSObject, NSWindowDelegate {
             content.width = content.height * ratio
         }
         return round(CGSize(width: content.width + chrome.width, height: content.height + chrome.height), sender)
+    }
+
+    /// Full screen: the toolbar slides in with the menu bar instead of covering the top of the remote
+    /// screen (where it would swallow the pointer).
+    func window(_ window: NSWindow, willUseFullScreenPresentationOptions proposedOptions: NSApplication.PresentationOptions = []) -> NSApplication.PresentationOptions {
+        let options = original?.window?(window, willUseFullScreenPresentationOptions: proposedOptions) ?? proposedOptions
+        // AppKit rejects autoHideToolbar without autoHideMenuBar (menu bar set to never hide).
+        return options.contains(.autoHideMenuBar) ? options.union(.autoHideToolbar) : options
     }
 
     private func round(_ size: CGSize, _ window: NSWindow) -> CGSize {

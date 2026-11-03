@@ -8,6 +8,11 @@ struct RemoteScreenView {
     var capturesSystemShortcuts = true
     /// iOS/iPadOS: on-screen keyboard with an extra-keys bar. Reset to false when the user dismisses it.
     var showsSoftwareKeyboard: Binding<Bool> = .constant(false)
+    /// macOS, windowed: the title bar and toolbar stay hidden until the pointer reaches the top edge.
+    var autoHidesToolbar = false
+    /// macOS: the window covers the whole display, menu bar area and camera housing included.
+    var edgeToEdge = false
+    var onToolbarReveal: (Bool) -> Void = { _ in }
 }
 
 /// Shared geometry: the rect the video occupies inside the container, and the mapping
@@ -21,10 +26,22 @@ enum ScreenGeometry {
                       width: size.width, height: size.height)
     }
 
-    /// `point` must be in a top-left-origin coordinate space.
-    static func absolute(_ point: CGPoint, in videoRect: CGRect) -> (x: Int, y: Int) {
-        let nx = min(max((point.x - videoRect.minX) / videoRect.width, 0), 1)
-        let ny = min(max((point.y - videoRect.minY) / videoRect.height, 0), 1)
+    /// Rect for the whole frame such that its `content` part (normalized) is aspect-fit in `bounds`:
+    /// black bars around the remote desktop end up outside the bounds or on the black background.
+    static func frameRect(videoSize: CGSize, content: CGRect, in bounds: CGRect) -> CGRect {
+        let visible = videoRect(videoSize: CGSize(width: videoSize.width * content.width,
+                                                  height: videoSize.height * content.height), in: bounds)
+        let size = CGSize(width: visible.width / content.width, height: visible.height / content.height)
+        return CGRect(x: visible.minX - content.minX * size.width, y: visible.minY - content.minY * size.height,
+                      width: size.width, height: size.height)
+    }
+
+    /// `point` must be in a top-left-origin coordinate space. `content` is the normalized part of
+    /// the frame the remote desktop occupies (see `ContentDetector`).
+    static func absolute(_ point: CGPoint, in videoRect: CGRect,
+                         content: CGRect = ContentDetector.fullFrame) -> (x: Int, y: Int) {
+        let nx = min(max(((point.x - videoRect.minX) / videoRect.width - content.minX) / content.width, 0), 1)
+        let ny = min(max(((point.y - videoRect.minY) / videoRect.height - content.minY) / content.height, 0), 1)
         return (Int((nx * 32767).rounded()), Int((ny * 32767).rounded()))
     }
 }
@@ -54,6 +71,9 @@ extension RemoteScreenView: NSViewRepresentable {
 
     func updateNSView(_ view: MacScreenView, context: Context) {
         view.capturesSystemShortcuts = capturesSystemShortcuts
+        view.autoHidesToolbar = autoHidesToolbar
+        view.edgeToEdge = edgeToEdge
+        view.onToolbarReveal = onToolbarReveal
         view.attach(feed: session.video)
         view.sourceSize = session.sourceSize
     }
@@ -79,10 +99,35 @@ final class MacScreenView: NSView, RTCVideoViewDelegate {
     private var videoSize: CGSize = .zero {
         didSet {
             needsLayout = true
-            aspectLock.videoSize = videoSize == .zero ? nil : videoSize
+            updateAspectLock()
         }
     }
     var sourceSize: CGSize = .zero { didSet { if videoSize == .zero { needsLayout = true } } }
+    private var contentRect = ContentDetector.fullFrame {
+        didSet { needsLayout = true; updateAspectLock() }
+    }
+
+    /// The window fits the remote desktop itself, without its black bars.
+    private func updateAspectLock() {
+        aspectLock.videoSize = videoSize == .zero ? nil
+            : CGSize(width: videoSize.width * contentRect.width, height: videoSize.height * contentRect.height)
+    }
+
+    var autoHidesToolbar = false {
+        didSet {
+            guard autoHidesToolbar != oldValue else { return }
+            DispatchQueue.main.async { self.setToolbarRevealed(false) }
+        }
+    }
+    var onToolbarReveal: (Bool) -> Void = { _ in }
+    var edgeToEdge = false {
+        didSet { if edgeToEdge != oldValue { applyEdgeToEdge() } }
+    }
+    /// Window frame to go back to when leaving edge-to-edge.
+    private var windowedFrame: NSRect?
+    private var toolbarRevealed = false
+    private var hideToolbar: DispatchWorkItem?
+    private var addedFullSizeContent = false
     private lazy var aspectLock = WindowAspectLock(view: self)
 
     init(session: KVMSession) {
@@ -90,9 +135,11 @@ final class MacScreenView: NSView, RTCVideoViewDelegate {
         super.init(frame: .zero)
         wantsLayer = true
         layer?.backgroundColor = NSColor.black.cgColor
+        clipsToBounds = true
         videoView.delegate = self
         addSubview(videoView)
         layerView.onVideoSize = { [weak self] size in self?.videoSize = size }
+        layerView.onContentRect = { [weak self] rect in self?.contentRect = rect }
         addSubview(layerView)
         interceptor.handler = { [weak self] event in self?.handleKey(event) }
     }
@@ -129,7 +176,7 @@ final class MacScreenView: NSView, RTCVideoViewDelegate {
     }
 
     private var currentVideoRect: CGRect {
-        ScreenGeometry.videoRect(videoSize: videoSize == .zero ? sourceSize : videoSize, in: bounds)
+        ScreenGeometry.frameRect(videoSize: videoSize == .zero ? sourceSize : videoSize, content: contentRect, in: bounds)
     }
 
     override func layout() {
@@ -168,6 +215,9 @@ final class MacScreenView: NSView, RTCVideoViewDelegate {
         center.addObserver(self, selector: #selector(windowKeyChanged), name: NSWindow.didResignKeyNotification, object: window)
         center.addObserver(self, selector: #selector(windowKeyChanged), name: NSApplication.didBecomeActiveNotification, object: nil)
         center.addObserver(self, selector: #selector(windowKeyChanged), name: NSApplication.didResignActiveNotification, object: nil)
+        center.addObserver(self, selector: #selector(fullScreenChanged), name: NSWindow.willEnterFullScreenNotification, object: window)
+        center.addObserver(self, selector: #selector(fullScreenChanged), name: NSWindow.didExitFullScreenNotification, object: window)
+        applyTitleBar()
         updateCapture()
     }
 
@@ -285,7 +335,7 @@ final class MacScreenView: NSView, RTCVideoViewDelegate {
 
     private func sendMouse(at point: CGPoint) {
         lastMouseLocation = point
-        let position = ScreenGeometry.absolute(point, in: currentVideoRect)
+        let position = ScreenGeometry.absolute(point, in: currentVideoRect, content: contentRect)
         session.sendAbsoluteMouse(x: position.x, y: position.y, buttons: buttons)
     }
 
@@ -313,7 +363,95 @@ final class MacScreenView: NSView, RTCVideoViewDelegate {
         sendMouse(at: location(of: event))
     }
 
-    override func mouseMoved(with event: NSEvent) { sendMouse(at: location(of: event)) }
+    override func mouseMoved(with event: NSEvent) {
+        let point = location(of: event)
+        sendMouse(at: point)
+        updateToolbarReveal(at: point)
+    }
+
+    // MARK: Toolbar auto-hide
+
+    /// Shows the bars when the pointer touches the top edge; hides them shortly after it moves back
+    /// down past where they end.
+    private func updateToolbarReveal(at point: CGPoint) {
+        guard autoHidesToolbar, !edgeToEdge, let window, !window.styleMask.contains(.fullScreen) else { return }
+        if point.y <= 4 {
+            hideToolbar?.cancel()
+            hideToolbar = nil
+            if !toolbarRevealed { setToolbarRevealed(true) }
+        } else if toolbarRevealed, hideToolbar == nil, point.y > 80 {
+            let task = DispatchWorkItem { [weak self] in
+                self?.hideToolbar = nil
+                self?.setToolbarRevealed(false)
+            }
+            hideToolbar = task
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: task)
+        }
+    }
+
+    private func setToolbarRevealed(_ revealed: Bool) {
+        toolbarRevealed = revealed
+        applyTitleBar()
+        onToolbarReveal(revealed) // SwiftUI hides the toolbar; the title strip is AppKit's
+    }
+
+    /// Hidden: content under a transparent title bar with no title or window buttons.
+    /// Full screen keeps macOS's own auto-hide.
+    private func applyTitleBar(in target: NSWindow? = nil, restore: Bool = false) {
+        guard let window = target ?? window else { return }
+        let hidden = !restore && (edgeToEdge || autoHidesToolbar && !toolbarRevealed) && !window.styleMask.contains(.fullScreen)
+        if hidden, !window.styleMask.contains(.fullSizeContentView) {
+            window.styleMask.insert(.fullSizeContentView)
+            addedFullSizeContent = true
+        } else if restore, addedFullSizeContent {
+            window.styleMask.remove(.fullSizeContentView)
+            addedFullSizeContent = false
+        }
+        window.titleVisibility = hidden ? .hidden : .visible
+        window.titlebarAppearsTransparent = hidden
+        for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+            window.standardWindowButton(button)?.isHidden = hidden
+        }
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        super.viewWillMove(toWindow: newWindow)
+        // Leaving the session (disconnect, back to the list): give the window its bars back.
+        if let window, newWindow !== window {
+            applyEdgeToEdge(in: window, restore: true)
+            applyTitleBar(in: window, restore: true)
+        }
+    }
+
+    /// Unlike native full screen (which stays below the camera housing), the window takes the whole
+    /// display. The menu bar and Dock stay hidden: sliding in, they would cover the remote screen's
+    /// edges and swallow the pointer. ⌥⌘F leaves the mode.
+    private func applyEdgeToEdge(in target: NSWindow? = nil, restore: Bool = false) {
+        guard let window = target ?? window else { return }
+        if edgeToEdge, !restore, window.styleMask.contains(.fullScreen) {
+            window.toggleFullScreen(nil) // continues in fullScreenChanged
+            return
+        }
+        if edgeToEdge, !restore, let screen = window.screen {
+            windowedFrame = windowedFrame ?? window.frame
+            aspectLock.suspended = true
+            NSApp.presentationOptions = [.hideDock, .hideMenuBar]
+            UnconstrainedWindow.set(window, true)
+            window.setFrame(screen.frame, display: true)
+        } else if let frame = windowedFrame {
+            windowedFrame = nil
+            aspectLock.suspended = false
+            NSApp.presentationOptions = []
+            UnconstrainedWindow.set(window, false)
+            window.setFrame(frame, display: true)
+        }
+        applyTitleBar(in: window, restore: restore)
+    }
+
+    @objc private func fullScreenChanged(_ note: Notification) {
+        setToolbarRevealed(note.name == NSWindow.willEnterFullScreenNotification)
+        if note.name == NSWindow.didExitFullScreenNotification, edgeToEdge { applyEdgeToEdge() }
+    }
     override func mouseDragged(with event: NSEvent) { sendMouse(at: location(of: event)) }
     override func rightMouseDragged(with event: NSEvent) { sendMouse(at: location(of: event)) }
     override func otherMouseDragged(with event: NSEvent) { sendMouse(at: location(of: event)) }
@@ -328,6 +466,36 @@ final class MacScreenView: NSView, RTCVideoViewDelegate {
         if event.phase == .began { scroll.reset() }
         let notches = scroll.notches(for: event.scrollingDeltaY, precise: event.hasPreciseScrollingDeltas)
         if notches != 0 { session.sendWheel(notches) }
+    }
+}
+
+/// A titled window can't cover the menu bar area: `constrainFrameRect` pulls it below. SwiftUI owns
+/// the window (a Swift class, which can't be subclassed at runtime), so its class gets a
+/// `constrainFrameRect` that leaves the frame alone for the windows listed here.
+enum UnconstrainedWindow {
+    private static var windows = Set<ObjectIdentifier>()
+    private static var patchedClasses = Set<ObjectIdentifier>()
+
+    static func set(_ window: NSWindow, _ unconstrained: Bool) {
+        guard unconstrained else { windows.remove(ObjectIdentifier(window)); return }
+        if let windowClass = object_getClass(window) { patch(windowClass) }
+        windows.insert(ObjectIdentifier(window))
+    }
+
+    private static func patch(_ windowClass: AnyClass) {
+        guard patchedClasses.insert(ObjectIdentifier(windowClass)).inserted else { return }
+        let selector = #selector(NSWindow.constrainFrameRect(_:to:))
+        guard let method = class_getInstanceMethod(windowClass, selector) else { return }
+        typealias Constrain = @convention(c) (NSWindow, Selector, NSRect, NSScreen?) -> NSRect
+        let original = unsafeBitCast(method_getImplementation(method), to: Constrain.self)
+        let replacement: @convention(block) (NSWindow, NSRect, NSScreen?) -> NSRect = { window, rect, screen in
+            windows.contains(ObjectIdentifier(window)) ? rect : original(window, selector, rect, screen)
+        }
+        let imp = imp_implementationWithBlock(replacement)
+        // Inherited from NSWindow: add an override on this class only; its own: replace it.
+        if !class_addMethod(windowClass, selector, imp, method_getTypeEncoding(method)) {
+            method_setImplementation(method, imp)
+        }
     }
 }
 
@@ -417,6 +585,7 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput, UIGesture
 
     private var videoSize: CGSize = .zero { didSet { setNeedsLayout() } }
     var sourceSize: CGSize = .zero { didSet { if videoSize == .zero { setNeedsLayout() } } }
+    private var contentRect = ContentDetector.fullFrame { didSet { setNeedsLayout() } }
 
     init(session: KVMSession) {
         self.session = session
@@ -430,6 +599,7 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput, UIGesture
         addSubview(videoView)
         layerView.isUserInteractionEnabled = false
         layerView.onVideoSize = { [weak self] size in self?.videoSize = size }
+        layerView.onContentRect = { [weak self] rect in self?.contentRect = rect }
         addSubview(layerView)
 
         let hover = UIHoverGestureRecognizer(target: self, action: #selector(hovered(_:)))
@@ -502,7 +672,7 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput, UIGesture
     }
 
     private var fitRect: CGRect {
-        ScreenGeometry.videoRect(videoSize: videoSize == .zero ? sourceSize : videoSize, in: bounds)
+        ScreenGeometry.frameRect(videoSize: videoSize == .zero ? sourceSize : videoSize, content: contentRect, in: bounds)
     }
 
     private var currentVideoRect: CGRect { zoomedRect ?? fitRect }
@@ -634,7 +804,7 @@ final class TouchScreenView: UIView, RTCVideoViewDelegate, UIKeyInput, UIGesture
 
     private func sendMouse(at point: CGPoint) {
         lastLocation = point
-        let position = ScreenGeometry.absolute(point, in: currentVideoRect)
+        let position = ScreenGeometry.absolute(point, in: currentVideoRect, content: contentRect)
         session.sendAbsoluteMouse(x: position.x, y: position.y, buttons: buttons)
     }
 

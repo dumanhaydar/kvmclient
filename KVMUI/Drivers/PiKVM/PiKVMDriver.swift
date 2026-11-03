@@ -139,7 +139,7 @@ final class PiKVMDriver: KVMDriver {
         let janus = JanusStream(http: http,
                                 watchParams: ["orientation": 0, "audio": false, "mic": false, "camera": false],
                                 queryFeatures: true)
-        janus.onTrack = { [weak self] track in self?.delegate?.driver(video: .webRTC(track)) }
+        janus.onTrack = { [weak self] track in self?.delegate?.driver(video: .webRTC(track), mode: "H.264 WebRTC") }
         janus.onConnected = { [weak self] in self?.markConnected() }
         janus.onFailure = { [weak self] message in
             guard let self else { return }
@@ -163,7 +163,7 @@ final class PiKVMDriver: KVMDriver {
         guard mjpeg == nil else { return }
         let frames = FrameStream()
         self.frames = frames
-        delegate?.driver(video: .frames(frames))
+        delegate?.driver(video: .frames(frames), mode: "MJPEG")
         let stream = http.stream("/streamer/stream", query: ["key": UUID().uuidString, "advance_headers": "1"])
         mjpeg = Task { [weak self] in
             do {

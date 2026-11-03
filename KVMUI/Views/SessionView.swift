@@ -2,6 +2,8 @@ import SwiftUI
 
 struct SessionView: View {
     @Environment(DeviceStore.self) private var store
+    /// The saved device, followed so edits apply to the open session.
+    private let device: KVMDevice
     @State private var session: KVMSession
     @State private var username = ""
     @State private var password = ""
@@ -9,6 +11,9 @@ struct SessionView: View {
     @State private var capturesShortcuts = true
     @State private var showsSoftwareKeyboard = Screenshots.showsKeyboard
     @State private var showsReleaseHint = false
+    @AppStorage("autoHidesToolbar") private var autoHidesToolbar = false
+    @State private var toolbarRevealed = false
+    @State private var edgeToEdge = false
     #if os(iOS)
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     #endif
@@ -29,6 +34,7 @@ struct SessionView: View {
     @Binding var columnVisibility: NavigationSplitViewVisibility
 
     init(device: KVMDevice, columnVisibility: Binding<NavigationSplitViewVisibility>) {
+        self.device = device
         _session = State(initialValue: KVMSession(device: device))
         _columnVisibility = columnVisibility
     }
@@ -40,9 +46,14 @@ struct SessionView: View {
             case .connected:
                 RemoteScreenView(session: session,
                                  capturesSystemShortcuts: capturesShortcuts,
-                                 showsSoftwareKeyboard: $showsSoftwareKeyboard)
+                                 showsSoftwareKeyboard: $showsSoftwareKeyboard,
+                                 autoHidesToolbar: autoHidesToolbar,
+                                 edgeToEdge: edgeToEdge,
+                                 onToolbarReveal: { toolbarRevealed = $0 })
                     #if os(iOS)
                     .ignoresSafeArea(.container)
+                    #else
+                    .ignoresSafeArea(edges: autoHidesToolbar || edgeToEdge ? .top : [])
                     #endif
                 #if os(macOS)
                 if showsReleaseHint {
@@ -85,21 +96,33 @@ struct SessionView: View {
         }
         .navigationTitle(hidesTitle ? "" : session.device.name)
         #if os(macOS)
-        .navigationSubtitle(session.activeRoute.map { String(localized: "via \($0.kind.title) · \($0.host)") } ?? "")
+        .navigationSubtitle(session.activeRoute.map {
+            String(localized: "via \($0.kind.title) · \($0.host)") + (session.videoMode.map { " · \($0)" } ?? "")
+        } ?? "")
         #endif
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar) // over the black screen, not the list
         #endif
         .toolbar { toolbar }
+        #if os(macOS)
+        .toolbar((edgeToEdge || autoHidesToolbar && !toolbarRevealed) && session.state == .connected ? .hidden : .visible,
+                 for: .windowToolbar)
+        .focusedSceneValue(\.edgeToEdge, session.state == .connected ? $edgeToEdge : nil)
+        #endif
         .task {
             session.onDeviceUpdate = { [store] device in store.update(device) }
             username = session.device.username ?? session.kind?.defaultUsername ?? ""
             connect()
         }
         .onDisappear { session.disconnect() }
+        .onChange(of: device) { _, edited in
+            guard session.apply(edited) else { return }
+            username = edited.username ?? edited.kind?.defaultUsername ?? ""
+            connect()
+        }
         .onChange(of: session.state) { _, state in
-            guard state == .connected else { return }
+            guard state == .connected else { edgeToEdge = false; return }
             if !Screenshots.keepsSidebar { withAnimation { columnVisibility = .detailOnly } }
             showsReleaseHint = true
             Task {

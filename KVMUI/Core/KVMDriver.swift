@@ -72,7 +72,8 @@ protocol KVMDriverDelegate: AnyObject {
     func driver(progress message: String)
     func driverDidConnect()
     func driver(didFail error: Error)
-    func driver(video: VideoFeed?)
+    /// `mode` names the stream for the user ("H.265", "MJPEG"...).
+    func driver(video: VideoFeed?, mode: String?)
     /// Remote display resolution, when the device reports it (the decoder also does).
     func driver(sourceSize: CGSize)
     /// nil when the HDMI input is fine, otherwise a human-readable reason.

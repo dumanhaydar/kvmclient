@@ -104,6 +104,16 @@
         }
       }
     },
+    "Auto-Hide Toolbar": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masquer automatiquement la barre d’outils"
+          }
+        }
+      }
+    },
     "Automatic Detection": {
       "localizations": {
         "fr": {
@@ -420,6 +430,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rechercher des KVM"
+          }
+        }
+      }
+    },
+    "Full Screen Using Camera Area": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plein écran avec la zone de la caméra"
           }
         }
       }
@@ -883,6 +903,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Réponse SDP refusée : %@"
+          }
+        }
+      }
+    },
+    "Reverse mouse wheel": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inverser la molette"
           }
         }
       }

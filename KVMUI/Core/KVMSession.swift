@@ -18,6 +18,8 @@ final class KVMSession {
 
     private(set) var state: ConnectionState = .idle
     private(set) var video: VideoFeed?
+    /// Codec / transport of the current video stream, for display.
+    private(set) var videoMode: String?
     /// Resolution of the captured HDMI source, as reported by the device.
     private(set) var sourceSize: CGSize = .zero
     /// nil when HDMI is fine; otherwise the device's reason (no_signal, no_lock, out_of_range...).
@@ -60,6 +62,13 @@ final class KVMSession {
         }
         self.http = http.client
         activeRoute = http.route
+
+        // Firmware that forces HTTPS (newer NanoKVM) redirects http://, which WebSockets don't follow.
+        if !device.useHTTPS, let final = try? await http.client.session.data(from: http.client.url("/")).1.url,
+           final.scheme == "https" {
+            updateDevice { $0.useHTTPS = true }
+            return await connect(credentials: credentials)
+        }
 
         do {
             let kind: DeviceKind
@@ -113,7 +122,7 @@ final class KVMSession {
     /// (local network first, then Tailscale, then ZeroTier).
     private func reachableClient() async -> (client: HTTPClient, route: Route)? {
         let candidates = device.routes.map {
-            (client: HTTPClient(baseURL: device.baseURL(for: $0), trustSelfSigned: device.useHTTPS), route: $0)
+            (client: HTTPClient(baseURL: device.baseURL(for: $0), trustSelfSigned: true), route: $0)
         }
         let reachable = await withTaskGroup(of: (Int, Bool).self) { group in
             for (index, candidate) in candidates.enumerated() {
@@ -141,6 +150,7 @@ final class KVMSession {
         http?.invalidate()
         http = nil
         video = nil
+        videoMode = nil
         typingTask?.cancel()
         typingTask = nil
         activeRoute = nil
@@ -154,6 +164,17 @@ final class KVMSession {
         guard state != .failed(message) else { return }
         disconnect()
         state = .failed(message)
+    }
+
+    /// Takes edits made in the device editor; true when they change how to reach or sign in to it.
+    func apply(_ edited: KVMDevice) -> Bool {
+        guard edited != device else { return false }
+        var unchangedRoute = edited
+        unchangedRoute.name = device.name
+        unchangedRoute.reverseWheel = device.reverseWheel
+        unchangedRoute.keyboardLayout = device.keyboardLayout
+        defer { device = edited }
+        return unchangedRoute != device
     }
 
     private func updateDevice(_ change: (inout KVMDevice) -> Void) {
@@ -216,7 +237,7 @@ final class KVMSession {
 
     /// One wheel notch; positive scrolls up.
     func sendWheel(_ delta: Int) {
-        driver?.sendWheel(delta)
+        driver?.sendWheel(device.reverseWheel == true ? -delta : delta)
     }
 }
 
@@ -238,7 +259,8 @@ extension KVMSession: KVMDriverDelegate {
         }
     }
 
-    func driver(video: VideoFeed?) {
+    func driver(video: VideoFeed?, mode: String?) {
+        videoMode = mode
         guard !(video?.isSame(as: self.video) ?? (self.video == nil)) else { return }
         self.video = video
     }

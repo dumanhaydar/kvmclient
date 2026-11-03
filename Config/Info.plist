@@ -5,11 +5,11 @@
 	<!-- Only standard TLS/DTLS from the OS and WebRTC: exempt from export documentation. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- Arbitrary loads only: adding NSAllowsLocalNetworking would make the OS ignore it, and self-signed
+	     KVMs reached over Tailscale/ZeroTier (not "local") would fail ATS. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 </dict>

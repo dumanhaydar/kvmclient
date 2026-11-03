@@ -117,7 +117,7 @@ final class TinyPilotDriver: KVMDriver {
     private func startJanus() {
         delegate?.driver(progress: String(localized: "Starting the H.264 stream…"))
         let janus = JanusStream(http: http, watchParams: ["audio": false], queryFeatures: false)
-        janus.onTrack = { [weak self] track in self?.delegate?.driver(video: .webRTC(track)) }
+        janus.onTrack = { [weak self] track in self?.delegate?.driver(video: .webRTC(track), mode: "H.264 WebRTC") }
         janus.onConnected = { [weak self] in self?.markConnected() }
         janus.onFailure = { [weak self] message in
             print("[tinypilot] Janus failed (\(message)), falling back to MJPEG")
@@ -138,7 +138,7 @@ final class TinyPilotDriver: KVMDriver {
     private func startMJPEG() {
         guard mjpeg == nil else { return }
         let frames = FrameStream()
-        delegate?.driver(video: .frames(frames))
+        delegate?.driver(video: .frames(frames), mode: "MJPEG")
         let stream = http.stream("/stream", query: ["advance_headers": "1"])
         mjpeg = Task { [weak self] in
             do {
